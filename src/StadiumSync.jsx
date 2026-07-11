@@ -267,12 +267,12 @@ function Onboarding({ onDone }) {
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
 
-  const enterFan = () => {
+  const enterAttendee = () => {
     if (!TICKET_FORMAT.test(ticket.trim())) {
       setTicketError(true);
       return;
     }
-    onDone({ type: "fan", avatar, name: name.trim() || "Fan" });
+    onDone({ type: "fan", avatar, name: name.trim() || "Attendee" });
   };
 
   const enterStaff = () => {
@@ -296,13 +296,13 @@ function Onboarding({ onDone }) {
           <div className="text-[#F3F3EF] font-bold text-2xl tracking-tight">StadiumSync</div>
           <div className="text-[#8FA69B] text-sm mt-1.5">World Cup 2026 · Estadio Azteca</div>
           <div className="flex items-center gap-1.5 mt-3 text-[#3ED07A] text-xs font-medium">
-            <Sparkles size={13} /> AI-powered fan &amp; ops companion
+            <Sparkles size={13} /> AI-powered attendee &amp; ops companion
           </div>
         </div>
 
         <Card className="p-5">
           <div className="grid grid-cols-2 gap-2 mb-5 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5">
-            {[["fan", "Fan"], ["staff", "Organizer / Staff"]].map(([id, label]) => (
+            {[["fan", "Attendee"], ["staff", "Organizer / Staff"]].map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setTab(id)}
@@ -346,7 +346,7 @@ function Onboarding({ onDone }) {
               <input
                 value={ticket}
                 onChange={(e) => { setTicket(e.target.value); setTicketError(false); }}
-                onKeyDown={(e) => e.key === "Enter" && enterFan()}
+                onKeyDown={(e) => e.key === "Enter" && enterAttendee()}
                 placeholder="e.g. WC26-118014"
                 className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 ${ticketError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
               />
@@ -357,7 +357,7 @@ function Onboarding({ onDone }) {
               )}
 
               <button
-                onClick={enterFan}
+                onClick={enterAttendee}
                 className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition"
               >
                 Enter the stadium <ArrowRight size={16} />
@@ -400,7 +400,7 @@ function Onboarding({ onDone }) {
         </Card>
 
         <div className="mt-5 flex items-center justify-center gap-1.5 text-[10px] text-[#5A6B62]">
-          <Users size={11} /> Fan actions feed the Ops layer in real time — same AI, every role.
+          <Users size={11} /> Attendee actions feed the Ops layer in real time — same AI, every role.
         </div>
       </div>
     </div>
@@ -743,7 +743,7 @@ function OpsPulseTab() {
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: "Fans in venue", value: "68,204", delta: "+3.2%", up: true },
+          { label: "Attendees in venue", value: "68,204", delta: "+3.2%", up: true },
           { label: "Open incidents", value: "3", delta: "-2", up: false },
           { label: "Avg. wait (food)", value: "11m", delta: "+4m", up: true },
         ].map((k) => (
@@ -779,7 +779,7 @@ function OpsPulseTab() {
         <div className="flex items-start gap-2.5 bg-[#FF6B5B]/10 border border-[#FF6B5B]/25 rounded-xl p-3.5">
           <AlertTriangle size={16} className="text-[#FF6B5B] mt-0.5 shrink-0" />
           <div className="text-sm text-[#F3F3EF]">
-            <span className="font-medium">47 fans</span> asked the assistant about "nearest exit" near Gate 4 in the last 6 minutes — a 5x spike. Recommend deploying 2 crowd marshals to Gate 4.
+            <span className="font-medium">47 attendees</span> asked the assistant about "nearest exit" near Gate 4 in the last 6 minutes — a 5x spike. Recommend deploying 2 crowd marshals to Gate 4.
           </div>
         </div>
       </Card>
@@ -952,7 +952,7 @@ export default function StadiumSync() {
         <ActiveComponent profile={profile} />
 
         <div className="mt-6 flex items-center justify-center gap-1.5 text-[10px] text-[#5A6B62]">
-          <Users size={11} /> Fan actions feed the Ops layer in real time — same AI, every role.
+          <Users size={11} /> Attendee actions feed the Ops layer in real time — same AI, every role.
         </div>
       </div>
     </div>
