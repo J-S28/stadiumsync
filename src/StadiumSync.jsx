@@ -411,6 +411,32 @@ function Onboarding({ onDone }) {
 
 function NavigateTab({ profile }) {
   const AvatarComp = AVATARS[profile.avatar].Comp;
+  const [stepFree, setStepFree] = useState(true);
+  const [speaking, setSpeaking] = useState(false);
+
+  const toggleAudio = () => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    const route = `Walking route to Section 118, Seat 14. ${stepFree ? "Step-free route active. " : ""}4 minute walk via Concourse N. Gate 4 is near capacity — exit via Concourse South after the match.`;
+    const utterance = new SpeechSynthesisUtterance(route);
+    utterance.rate = 1;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
+    };
+  }, []);
+
   return (
     <div className="space-y-4">
       <Card className="p-5">
@@ -485,18 +511,26 @@ function NavigateTab({ profile }) {
       <Card className="p-5">
         <SectionLabel>Accessibility</SectionLabel>
         <div className="grid grid-cols-2 gap-3">
-          {[
-            { icon: Accessibility, label: "Step-free route", sub: "Active" },
-            { icon: Volume2, label: "Audio wayfinding", sub: "Available" },
-          ].map((a) => (
-            <div key={a.label} className="flex items-center gap-2.5 bg-[#16281F] rounded-xl p-3">
-              <a.icon size={16} className="text-[#3ED07A] shrink-0" />
-              <div>
-                <div className="text-sm text-[#F3F3EF] leading-tight">{a.label}</div>
-                <div className="text-[11px] text-[#8FA69B]">{a.sub}</div>
-              </div>
+          <button
+            onClick={() => setStepFree((v) => !v)}
+            className={`flex items-center gap-2.5 rounded-xl p-3 text-left transition ${stepFree ? "bg-[#16281F]" : "bg-[#16281F] opacity-60"}`}
+          >
+            <Accessibility size={16} className={`shrink-0 ${stepFree ? "text-[#3ED07A]" : "text-[#8FA69B]"}`} />
+            <div>
+              <div className="text-sm text-[#F3F3EF] leading-tight">Step-free route</div>
+              <div className="text-[11px] text-[#8FA69B]">{stepFree ? "Active — avoiding stairs" : "Off — standard route"}</div>
             </div>
-          ))}
+          </button>
+          <button
+            onClick={toggleAudio}
+            className="flex items-center gap-2.5 bg-[#16281F] rounded-xl p-3 text-left transition"
+          >
+            <Volume2 size={16} className={`shrink-0 ${speaking ? "text-[#3ED07A] animate-pulse" : "text-[#8FA69B]"}`} />
+            <div>
+              <div className="text-sm text-[#F3F3EF] leading-tight">Audio wayfinding</div>
+              <div className="text-[11px] text-[#8FA69B]">{speaking ? "Speaking… tap to stop" : "Tap to hear directions"}</div>
+            </div>
+          </button>
         </div>
       </Card>
     </div>
