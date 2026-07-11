@@ -14,7 +14,7 @@ A World Cup stadium is one of the hardest real-time coordination problems in liv
 
 StadiumSync is one AI layer serving two audiences from the same live data:
 
-- **Fans** get live wayfinding, food ordering, transport suggestions, and a multilingual AI assistant (English/Spanish/Portuguese) that answers questions grounded in real venue conditions — not generic chat.
+- **Fans** get live, Rapido/Uber-style GPS-tracked wayfinding, food ordering, transport suggestions, and a multilingual AI assistant that auto-detects whatever language they type in and answers questions grounded in real venue conditions — not generic chat.
 - **Staff / organizers** get the aggregate view: zone density heatmaps, vendor wait times and stock alerts, sustainability tracking, and AI-flagged signals (e.g. "47 fans asked about the nearest exit near Gate 4 in 6 minutes — a 5x spike, deploy crowd marshals").
 
 Every fan interaction feeds the same operational picture staff are watching — the pitch is "same AI, every role."
@@ -23,9 +23,9 @@ Every fan interaction feeds the same operational picture staff are watching — 
 
 | Fan view | Staff view |
 |---|---|
-| Live wayfinding + zone crowd levels | Ops Pulse (live zone density, AI-flagged crowd signals) |
+| Live wayfinding with an animated GPS-style position marker + zone crowd levels | Ops Pulse (live zone density, AI-flagged crowd signals) |
 | Food ordering with AI wait-time picks | Vendor load + stock alerts |
-| Multilingual AI assistant (EN/ES/PT) | Sustainability / waste diversion tracking |
+| Multilingual AI assistant — auto-detects EN/ES/PT/FR/DE from what's typed | Sustainability / waste diversion tracking |
 | Transport + post-match surge prediction | |
 | Accessibility (step-free routing, audio wayfinding) | |
 
@@ -46,7 +46,8 @@ These are stand-ins for real ticket verification and staff authentication — en
 The in-app assistant (`AssistantTab`) is backed by **Claude (`claude-opus-4-8`)** via the Anthropic API — called from a Vercel serverless function (`api/assistant.js`), never directly from the browser, so the API key is never exposed to the client.
 
 - The system prompt grounds every answer in the stadium's actual live state (zone density, gate congestion, vendor wait times, transit ETAs, accessibility routes) — so answers like "what's my fastest exit" are consistent with what the Ops dashboard is showing staff, not generic advice.
-- Multilingual by design: the assistant replies in whatever language the fan writes in.
+- Genuinely multilingual, not just a language picker: the system prompt tells Claude to reply in whatever language the fan just wrote in, so it isn't limited to the five UI pills (EN/ES/PT/FR/DE) — anyone can type in any language and get an answer back in kind.
+- The frontend auto-detects the fan's language from what they type (no need to tap a pill first) to pick the right scripted fallback bank and highlight the matching pill — this only affects the offline fallback; the live Claude path already replies in-language by default.
 - If the API is unreachable (no key configured, offline, rate-limited), the UI falls back gracefully to a scripted responder so the demo never breaks mid-presentation.
 
 ## Tech stack

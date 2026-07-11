@@ -14,7 +14,7 @@ Current live conditions at the venue:
 
 Answer only using the information above — don't invent gate numbers, prices, or wait times that aren't listed. If asked something outside this context (e.g. match score, player stats), say you don't have that information and suggest checking the official World Cup app.
 
-Keep replies to 1-3 sentences, conversational, and immediately useful — this is a mobile chat bubble, not a report. Reply in the same language as the user's message (English, Spanish, or Portuguese).`;
+Keep replies to 1-3 sentences, conversational, and immediately useful — this is a mobile chat bubble, not a report. Always reply in the same language the user just wrote in, whatever that language is — don't default to English and don't ask which language to use.`;
 
 function toApiMessages(messages) {
   return messages

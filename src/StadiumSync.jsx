@@ -85,14 +85,57 @@ const ASSISTANT_SCRIPT = {
       default: "Entendido — encaminhando para o lugar certo. Para rotas, toque em Navegar; para comida, toque em Pedir.",
     },
   },
+  fr: {
+    greet: "Salut ! Je suis l'assistant StadiumSync. Demandez-moi n'importe quoi — directions, nourriture, transport, accessibilité.",
+    replies: {
+      restroom: "Les toilettes les plus proches sont à 40m après la Section 118, à gauche après la boutique. L'attente est faible en ce moment.",
+      exit: "Votre sortie la plus rapide est la Porte 4 — mais elle est bondée (97%). Je vous suggère l'Esplanade S, 6 minutes de marche en plus mais vous sortirez plus vite au total.",
+      food: "Churro + sauce a la file la plus courte en ce moment (3 min). Je l'ajoute à votre commande ?",
+      default: "Compris — je vous oriente vers le bon endroit. Pour l'itinéraire, appuyez sur Naviguer ; pour la nourriture, appuyez sur Commander.",
+    },
+  },
+  de: {
+    greet: "Hallo! Ich bin dein StadiumSync-Assistent. Frag mich alles — Wegbeschreibung, Essen, Transport, Barrierefreiheit.",
+    replies: {
+      restroom: "Die nächste Toilette ist 40m hinter Abschnitt 118, links nach dem Fanshop. Gerade kurze Wartezeit.",
+      exit: "Dein schnellster Ausgang ist Tor 4 — aber stark ausgelastet (97%). Ich empfehle Bereich S, 6 Minuten mehr Fußweg, aber insgesamt schneller draußen.",
+      food: "Churro + Dip hat gerade die kürzeste Wartezeit (3 Min). Soll ich es zu deiner Bestellung hinzufügen?",
+      default: "Verstanden — ich leite dich weiter. Für Wegbeschreibung tippe auf Navigieren, für Essen auf Bestellen.",
+    },
+  },
 };
+
+const LANG_DETECT_MARKERS = {
+  es: [/\bdónde\b/, /\bbaño\b/, /\bsalida\b/, /\bcomida\b/, /\bcómo\b/, /\bhola\b/, /\bgracias\b/, /[ñ¿¡]/],
+  pt: [/\bbanheiro\b/, /\bsaída\b/, /\bcomida\b/, /\bonde\b/, /\bobrigad[oa]\b/, /[ãõç]/],
+  fr: [/\btoilettes?\b/, /\bsortie\b/, /\bnourriture\b/, /\boù\b/, /\bmerci\b/, /\bbonjour\b/, /[àâçèêëîïôûù]/],
+  de: [/\btoilette\b/, /\bausgang\b/, /\bessen\b/, /\bwo\b/, /\bdanke\b/, /\bhallo\b/, /[äöüß]/],
+  en: [/\bwhere\b/, /\brestroom\b/, /\bexit\b/, /\bfood\b/, /\bthanks?\b/, /\bhello\b/, /\bhi\b/],
+};
+
+// Best-effort language guess from free text — used to auto-switch the
+// assistant's fallback script bank when the fan types instead of tapping a
+// language pill. Returns null when no language scores a confident match.
+function detectLang(text) {
+  const t = ` ${text.toLowerCase()} `;
+  let best = null;
+  let bestScore = 0;
+  for (const [lang, patterns] of Object.entries(LANG_DETECT_MARKERS)) {
+    const score = patterns.reduce((s, p) => s + (p.test(t) ? 1 : 0), 0);
+    if (score > bestScore) {
+      best = lang;
+      bestScore = score;
+    }
+  }
+  return best;
+}
 
 function pickReply(lang, text) {
   const t = text.toLowerCase();
   const bank = ASSISTANT_SCRIPT[lang].replies;
-  if (t.includes("bath") || t.includes("restroom") || t.includes("baño") || t.includes("banheiro")) return bank.restroom;
-  if (t.includes("exit") || t.includes("salida") || t.includes("saída") || t.includes("leave")) return bank.exit;
-  if (t.includes("food") || t.includes("snack") || t.includes("comida") || t.includes("hungry") || t.includes("eat")) return bank.food;
+  if (t.includes("bath") || t.includes("restroom") || t.includes("baño") || t.includes("banheiro") || t.includes("toilette")) return bank.restroom;
+  if (t.includes("exit") || t.includes("salida") || t.includes("saída") || t.includes("sortie") || t.includes("ausgang") || t.includes("leave")) return bank.exit;
+  if (t.includes("food") || t.includes("snack") || t.includes("comida") || t.includes("nourriture") || t.includes("essen") || t.includes("hungry") || t.includes("eat")) return bank.food;
   return bank.default;
 }
 
@@ -384,14 +427,35 @@ function NavigateTab({ profile }) {
         <svg viewBox="0 0 320 140" className="w-full h-32 rounded-xl bg-[#0B140F]">
           <ellipse cx="160" cy="70" rx="140" ry="55" fill="none" stroke="#223328" strokeWidth="2" />
           <ellipse cx="160" cy="70" rx="90" ry="34" fill="#16281F" stroke="#3ED07A" strokeWidth="1.5" opacity="0.5" />
-          <circle cx="60" cy="45" r="6" fill="#FF6B5B">
-            <animate attributeName="r" values="6;8;6" dur="1.6s" repeatCount="indefinite" />
-          </circle>
+
+          {/* planned route, faint */}
+          <path d="M 60 45 Q 140 20 250 95" fill="none" stroke="#FFC24B" strokeWidth="2" strokeDasharray="6 5" opacity="0.3" />
+
+          {/* traveled portion — fills in as the live marker advances */}
+          <path
+            d="M 60 45 Q 140 20 250 95"
+            fill="none" stroke="#3ED07A" strokeWidth="2.5" strokeLinecap="round"
+            pathLength="100" strokeDasharray="100" strokeDashoffset="100"
+          >
+            <animate attributeName="stroke-dashoffset" values="100;0" dur="6s" repeatCount="indefinite" />
+          </path>
+
           <circle cx="250" cy="95" r="5" fill="#3ED07A" />
-          <path d="M 60 45 Q 140 20 250 95" fill="none" stroke="#FFC24B" strokeWidth="2.5" strokeDasharray="6 5" />
-          <text x="60" y="34" fill="#8FA69B" fontSize="9" textAnchor="middle">You</text>
           <text x="250" y="112" fill="#8FA69B" fontSize="9" textAnchor="middle">Seat</text>
+
+          {/* live position marker */}
+          <g>
+            <animateMotion dur="6s" repeatCount="indefinite" path="M 60 45 Q 140 20 250 95" />
+            <circle r="10" fill="#3ED07A" opacity="0.3">
+              <animate attributeName="r" values="7;12;7" dur="1.4s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.35;0.05;0.35" dur="1.4s" repeatCount="indefinite" />
+            </circle>
+            <circle r="4.5" fill="#F3F3EF" stroke="#3ED07A" strokeWidth="2" />
+          </g>
         </svg>
+        <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[#3ED07A]">
+          <Radio size={10} className="animate-pulse" /> Live position — updating as you walk
+        </div>
       </Card>
 
       <Card className="p-5">
@@ -502,10 +566,23 @@ function AssistantTab({ profile }) {
   const UserAvatar = AVATARS[profile.avatar].Comp;
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
-  useEffect(() => { setMessages([{ from: "bot", text: ASSISTANT_SCRIPT[lang].greet }]); }, [lang]);
+
+  // Manually tapping a language pill starts a fresh chat in that language.
+  const selectLang = (code) => {
+    setLang(code);
+    setMessages([{ from: "bot", text: ASSISTANT_SCRIPT[code].greet }]);
+  };
 
   const send = async () => {
     if (!input.trim() || loading) return;
+
+    // Auto-detect the language of what was typed so the fan never has to tap
+    // a pill first — only the fallback script bank changes; the conversation
+    // itself isn't reset (unlike selectLang, which is an explicit restart).
+    const detected = detectLang(input);
+    const activeLang = detected || lang;
+    if (detected && detected !== lang) setLang(detected);
+
     const userMsg = { from: "user", text: input };
     const history = [...messages, userMsg];
     setMessages(history);
@@ -520,10 +597,10 @@ function AssistantTab({ profile }) {
       });
       if (!res.ok) throw new Error("assistant request failed");
       const data = await res.json();
-      setMessages((m) => [...m, { from: "bot", text: data.reply || pickReply(lang, userMsg.text) }]);
+      setMessages((m) => [...m, { from: "bot", text: data.reply || pickReply(activeLang, userMsg.text) }]);
     } catch {
       // Offline / API-key-not-configured fallback so the demo still works
-      setMessages((m) => [...m, { from: "bot", text: pickReply(lang, userMsg.text) }]);
+      setMessages((m) => [...m, { from: "bot", text: pickReply(activeLang, userMsg.text) }]);
     } finally {
       setLoading(false);
     }
@@ -531,18 +608,19 @@ function AssistantTab({ profile }) {
 
   return (
     <div className="flex flex-col h-[520px]">
-      <div className="flex items-center gap-2 mb-3">
-        {[["en", "EN"], ["es", "ES"], ["pt", "PT"]].map(([code, label]) => (
+      <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
+        {[["en", "EN"], ["es", "ES"], ["pt", "PT"], ["fr", "FR"], ["de", "DE"]].map(([code, label]) => (
           <button
             key={code}
-            onClick={() => setLang(code)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition ${lang === code ? "bg-[#3ED07A] text-[#0B140F] border-[#3ED07A]" : "bg-transparent text-[#8FA69B] border-[#223328]"}`}
+            onClick={() => selectLang(code)}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition shrink-0 ${lang === code ? "bg-[#3ED07A] text-[#0B140F] border-[#3ED07A]" : "bg-transparent text-[#8FA69B] border-[#223328]"}`}
           >
             {label}
           </button>
         ))}
         <Pill tone="live"><Radio size={10} /> Multilingual AI</Pill>
       </div>
+      <p className="text-[10px] text-[#5A6B62] mb-3 -mt-1.5">Auto-detects the language you type in — tap a pill to switch manually.</p>
 
       <Card className="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
         {messages.map((m, i) => (
