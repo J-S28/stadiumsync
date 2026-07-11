@@ -29,9 +29,16 @@ Every fan interaction feeds the same operational picture staff are watching — 
 | Transport + post-match surge prediction | |
 | Accessibility (step-free routing, audio wayfinding) | |
 
-A lightweight onboarding flow lets each fan pick an avatar (mascot-style illustrated characters) and a name, which then follows them through the app — the map, the header, and the assistant's chat bubbles.
+A lightweight onboarding flow lets each fan pick an avatar (mascot-style illustrated characters), a name, and a ticket ID, which then follows them through the app — the map, the header, and the assistant's chat bubbles.
 
-Switching to the Organizer/Staff console is gated behind a passcode (`2026`) — a lightweight stand-in for what would be real staff authentication in production, so the ops dashboard isn't one tap away for every fan.
+Both roles are gated, mirroring how a real deployment would separate fan entry from staff tooling:
+
+| Role | Gate | Demo credential |
+|---|---|---|
+| Fan | Ticket ID at onboarding | `WC26-118014` |
+| Organizer / Staff | Passcode on the role switch | `2026` |
+
+These are stand-ins for real ticket verification and staff authentication — enough to show the access boundary exists without building a full auth backend for a hackathon demo.
 
 ## How GenAI is used
 

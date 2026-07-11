@@ -23,6 +23,7 @@ Palette:
 --------------------------------------------------------------------------- */
 
 const STAFF_PIN = "2026"; // demo-only gate for the staff console (see README)
+const FAN_TICKET = "WC26-118014"; // demo-only gate for fan entry — Section 118, Seat 14 (see README)
 
 const ZONES = [
   { name: "Gate 3", density: 91, cap: 100 },
@@ -215,6 +216,16 @@ function SectionLabel({ children }) {
 function Onboarding({ onDone }) {
   const [avatar, setAvatar] = useState("boy");
   const [name, setName] = useState("");
+  const [ticket, setTicket] = useState("");
+  const [ticketError, setTicketError] = useState(false);
+
+  const enter = () => {
+    if (ticket.trim().toUpperCase() !== FAN_TICKET) {
+      setTicketError(true);
+      return;
+    }
+    onDone({ avatar, name: name.trim() || "Fan" });
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#0B140F] flex items-center justify-center px-4 py-10 relative overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -260,8 +271,22 @@ function Onboarding({ onDone }) {
             className="w-full bg-[#16281F] border border-[#223328] rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none focus:border-[#3ED07A] mb-5"
           />
 
+          <SectionLabel>Ticket ID</SectionLabel>
+          <input
+            value={ticket}
+            onChange={(e) => { setTicket(e.target.value); setTicketError(false); }}
+            onKeyDown={(e) => e.key === "Enter" && enter()}
+            placeholder="e.g. WC26-118014"
+            className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 ${ticketError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
+          />
+          {ticketError ? (
+            <p className="text-[#FF6B5B] text-xs mb-3">Ticket ID not recognized — check your confirmation email.</p>
+          ) : (
+            <p className="text-[#5A6B62] text-xs mb-3">Found on your match ticket confirmation.</p>
+          )}
+
           <button
-            onClick={() => onDone({ avatar, name: name.trim() || "Fan" })}
+            onClick={enter}
             className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition"
           >
             Enter the stadium <ArrowRight size={16} />
