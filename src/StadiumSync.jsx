@@ -317,7 +317,7 @@ function Onboarding({ onDone }) {
 
         <Card className="p-5">
           <div className="grid grid-cols-2 gap-2 mb-5 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5">
-            {[["fan", "Attendee"], ["staff", "Organizer / Staff"]].map(([id, label]) => (
+            {[["fan", "Attendee"], ["staff", "Operations"]].map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setTab(id)}
@@ -384,8 +384,8 @@ function Onboarding({ onDone }) {
                 <div className="w-16 h-16 rounded-full overflow-hidden mb-3">
                   <StaffAvatar size={64} />
                 </div>
-                <div className="text-[#F3F3EF] font-semibold text-sm">Organizer / Staff access</div>
-                <div className="text-[#8FA69B] text-xs mt-1">Enter the staff passcode to open the Ops Console.</div>
+                <div className="text-[#F3F3EF] font-semibold text-sm">Operations access</div>
+                <div className="text-[#8FA69B] text-xs mt-1">Enter the operations passcode to open the Ops Console.</div>
               </div>
 
               <SectionLabel>Passcode</SectionLabel>
@@ -935,7 +935,7 @@ export default function StadiumSync() {
 
   const handleOnboardingDone = (result) => {
     if (result.type === "staff") {
-      setProfile({ avatar: "boy", name: "Staff" });
+      setProfile({ avatar: "boy", name: "Operations" });
       setRole("staff");
       setActiveId(STAFF_TABS[0].id);
     } else {
@@ -968,7 +968,7 @@ export default function StadiumSync() {
             </div>
             <div>
               <div className="text-[#F3F3EF] font-bold text-[15px] leading-none tracking-tight">
-                {role === "fan" ? `Hey, ${profile.name}` : "Staff Console"}
+                {role === "fan" ? `Hey, ${profile.name}` : "Ops Console"}
               </div>
               <div className="text-[#8FA69B] text-[11px] mt-1">World Cup 2026 · Estadio Azteca</div>
             </div>

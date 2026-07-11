@@ -29,15 +29,15 @@ Every attendee interaction feeds the same operational picture staff are watching
 | Transport + post-match surge prediction | |
 | Accessibility (step-free routing, audio wayfinding) | |
 
-Role selection happens once, at the landing page — not inside the app. There's no Attendee/Staff toggle once you're in; each session commits to one role, and a small exit icon next to the "Live" pill returns to the landing page to switch:
+Role selection happens once, at the landing page — not inside the app. There's no Attendee/Operations toggle once you're in; each session commits to one role, and a small exit icon next to the "Live" pill returns to the landing page to switch:
 
 - **Attendee tab:** pick an avatar (mascot-style illustrated characters), a name, and a ticket ID. Real ticket IDs are unique per attendee, so there's no single "correct" value — any input that looks like a ticket ID (6+ letters/digits/dashes, e.g. `WC26-118014`) is accepted, the same way a lightweight client-side format check would work before hitting a real ticketing system.
-- **Organizer / Staff tab:** enter the staff passcode and go straight to the Ops Console, no ticket required. The demo passcode (`2026`) is shown right on the form, since — unlike an attendee's ticket — it's one real shared credential a venue would actually hand out to staff, not something to hide behind a README.
+- **Operations tab:** enter the operations passcode and go straight to the Ops Console, no ticket required. The demo passcode (`2026`) is shown right on the form, since — unlike an attendee's ticket — it's one real shared credential a venue would actually hand out to staff, not something to hide behind a README.
 
 | Role | Gate | How to pass it |
 |---|---|---|
 | Attendee | Ticket ID format check | Any ID-shaped string, 6+ letters/digits/dashes (e.g. `WC26-118014`) |
-| Organizer / Staff | Fixed passcode | `2026` (shown on the form) |
+| Operations | Fixed passcode | `2026` (shown on the form) |
 
 These are stand-ins for real ticket verification and staff authentication — enough to show the access boundary exists without building a full auth backend for a hackathon demo.
 
