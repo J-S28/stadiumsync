@@ -23,7 +23,9 @@ Palette:
 --------------------------------------------------------------------------- */
 
 const STAFF_PIN = "2026"; // demo-only gate for the staff console (see README)
-const FAN_TICKET = "WC26-118014"; // demo-only gate for fan entry — Section 118, Seat 14 (see README)
+// Real ticket IDs are unique per fan, so there's no single "correct" value to
+// check against — validate the shape instead (letters/digits/dashes, 6+ chars).
+const TICKET_FORMAT = /^[A-Za-z0-9-]{6,}$/;
 
 const ZONES = [
   { name: "Gate 3", density: 91, cap: 100 },
@@ -223,7 +225,7 @@ function Onboarding({ onDone }) {
   const [pinError, setPinError] = useState(false);
 
   const enterFan = () => {
-    if (ticket.trim().toUpperCase() !== FAN_TICKET) {
+    if (!TICKET_FORMAT.test(ticket.trim())) {
       setTicketError(true);
       return;
     }
@@ -306,9 +308,9 @@ function Onboarding({ onDone }) {
                 className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 ${ticketError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
               />
               {ticketError ? (
-                <p className="text-[#FF6B5B] text-xs mb-3">Ticket ID not recognized — check your confirmation email.</p>
+                <p className="text-[#FF6B5B] text-xs mb-3">That doesn't look like a ticket ID — at least 6 letters/digits, found on your confirmation email.</p>
               ) : (
-                <p className="text-[#5A6B62] text-xs mb-3">Found on your match ticket confirmation.</p>
+                <p className="text-[#5A6B62] text-xs mb-3">Found on your match ticket confirmation, e.g. WC26-118014.</p>
               )}
 
               <button

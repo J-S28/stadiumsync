@@ -31,15 +31,15 @@ Every fan interaction feeds the same operational picture staff are watching — 
 
 Onboarding starts with a role picker — **Fan** or **Organizer / Staff** — mirroring how a real deployment would separate fan entry from staff tooling from the first screen, not just inside the app:
 
-- **Fan tab:** pick an avatar (mascot-style illustrated characters), a name, and a ticket ID. The chosen avatar then follows the fan through the app — the map, the header, and the assistant's chat bubbles.
+- **Fan tab:** pick an avatar (mascot-style illustrated characters), a name, and a ticket ID. Real ticket IDs are unique per fan, so there's no single "correct" value — any input that looks like a ticket ID (6+ letters/digits/dashes, e.g. `WC26-118014`) is accepted, the same way a lightweight client-side format check would work before hitting a real ticketing system. The chosen avatar then follows the fan through the app — the map, the header, and the assistant's chat bubbles.
 - **Organizer / Staff tab:** enter the staff passcode and go straight to the Ops Console, no ticket required.
 
 Both roles stay gated after entry too — a fan who taps "Organizer / Staff" mid-session is still prompted for the passcode if they haven't unlocked it yet:
 
-| Role | Gate | Demo credential |
+| Role | Gate | How to pass it |
 |---|---|---|
-| Fan | Ticket ID at onboarding | `WC26-118014` |
-| Organizer / Staff | Passcode on the role switch | `2026` |
+| Fan | Ticket ID format check at onboarding | Any ID-shaped string, 6+ letters/digits/dashes (e.g. `WC26-118014`) |
+| Organizer / Staff | Fixed passcode, at onboarding or on the in-app role switch | `2026` |
 
 These are stand-ins for real ticket verification and staff authentication — enough to show the access boundary exists without building a full auth backend for a hackathon demo.
 
