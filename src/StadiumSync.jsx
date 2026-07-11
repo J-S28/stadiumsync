@@ -43,6 +43,21 @@ const VENDOR_LOAD = [
   { name: "Ice Cream Co.", wait: 3, stock: 12 },
 ];
 
+const TRANSPORT_ROUTES = [
+  {
+    id: "shuttle", icon: Bus, name: "Shuttle Line C", eta: "8 min", tone: "live",
+    path: "M 160 108 Q 100 70 55 40", dest: { x: 55, y: 40 }, label: { x: 55, y: 30, text: "Shuttle C" },
+  },
+  {
+    id: "metro", icon: Navigation, name: "Metro — Blue Line", eta: "3 min", tone: "live",
+    path: "M 160 106 Q 160 60 160 18", dest: { x: 160, y: 18 }, label: { x: 160, y: 12, text: "Metro" },
+  },
+  {
+    id: "rideshare", icon: MapPin, name: "Rideshare pickup B2", eta: "12 min wait", tone: "alert",
+    path: "M 160 108 Q 220 70 265 42", dest: { x: 265, y: 42 }, label: { x: 265, y: 32, text: "Rideshare B2" },
+  },
+];
+
 const SUSTAIN_PIE = [
   { name: "Recycled", value: 62 },
   { name: "Landfill", value: 28 },
@@ -706,6 +721,9 @@ function AssistantTab({ profile }) {
 }
 
 function TransportTab() {
+  const [selected, setSelected] = useState(null);
+  const active = TRANSPORT_ROUTES.find((r) => r.id === selected);
+
   return (
     <div className="space-y-4">
       <Card className="p-5">
@@ -714,20 +732,20 @@ function TransportTab() {
           <ellipse cx="160" cy="118" rx="60" ry="20" fill="none" stroke="#223328" strokeWidth="2" />
           <ellipse cx="160" cy="118" rx="38" ry="12" fill="#16281F" stroke="#3ED07A" strokeWidth="1.2" opacity="0.5" />
 
-          {/* Shuttle Line C */}
-          <path d="M 160 108 Q 100 70 55 40" fill="none" stroke="#3ED07A" strokeWidth="2" strokeDasharray="5 4" />
-          <circle cx="55" cy="40" r="5" fill="#3ED07A" />
-          <text x="55" y="30" fill="#8FA69B" fontSize="9" textAnchor="middle">Shuttle C</text>
-
-          {/* Metro — Blue Line */}
-          <path d="M 160 106 Q 160 60 160 18" fill="none" stroke="#3ED07A" strokeWidth="2" strokeDasharray="5 4" />
-          <circle cx="160" cy="18" r="5" fill="#3ED07A" />
-          <text x="160" y="12" fill="#8FA69B" fontSize="9" textAnchor="middle">Metro</text>
-
-          {/* Rideshare pickup B2 */}
-          <path d="M 160 108 Q 220 70 265 42" fill="none" stroke="#FFC24B" strokeWidth="2" strokeDasharray="5 4" />
-          <circle cx="265" cy="42" r="5" fill="#FFC24B" />
-          <text x="265" y="32" fill="#8FA69B" fontSize="9" textAnchor="middle">Rideshare B2</text>
+          {TRANSPORT_ROUTES.map((r) => {
+            const isSelected = r.id === selected;
+            const dimmed = selected && !isSelected;
+            const color = r.tone === "alert" ? "#FFC24B" : "#3ED07A";
+            return (
+              <g key={r.id} opacity={dimmed ? 0.25 : 1} style={{ transition: "opacity 0.2s" }}>
+                <path d={r.path} fill="none" stroke={color} strokeWidth={isSelected ? 3 : 2} strokeDasharray={isSelected ? "0" : "5 4"} />
+                <circle cx={r.dest.x} cy={r.dest.y} r={isSelected ? 7 : 5} fill={color}>
+                  {isSelected && <animate attributeName="r" values="7;9;7" dur="1s" repeatCount="indefinite" />}
+                </circle>
+                <text x={r.label.x} y={r.label.y} fill={isSelected ? "#F3F3EF" : "#8FA69B"} fontSize={isSelected ? 10 : 9} fontWeight={isSelected ? "700" : "400"} textAnchor="middle">{r.label.text}</text>
+              </g>
+            );
+          })}
 
           {/* You / stadium exit */}
           <circle cx="160" cy="118" r="6" fill="#F3F3EF" stroke="#3ED07A" strokeWidth="2">
@@ -735,23 +753,30 @@ function TransportTab() {
           </circle>
           <text x="160" y="140" fill="#8FA69B" fontSize="9" textAnchor="middle">You</text>
         </svg>
+        {active && (
+          <div className="flex items-center gap-1.5 text-[11px] text-[#3ED07A] mt-1">
+            <Radio size={10} className="animate-pulse" /> Showing {active.name} — {active.eta}
+          </div>
+        )}
       </Card>
 
       <Card className="p-5">
         <SectionLabel>Get home</SectionLabel>
         <div className="space-y-3">
-          {[
-            { icon: Bus, name: "Shuttle Line C", eta: "8 min", tone: "live" },
-            { icon: Navigation, name: "Metro — Blue Line", eta: "3 min", tone: "live" },
-            { icon: MapPin, name: "Rideshare pickup B2", eta: "12 min wait", tone: "alert" },
-          ].map((r) => (
-            <div key={r.name} className="flex items-center justify-between bg-[#16281F] rounded-xl p-3.5">
+          {TRANSPORT_ROUTES.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setSelected((s) => (s === r.id ? null : r.id))}
+              className={`w-full flex items-center justify-between rounded-xl p-3.5 text-left border transition ${
+                selected === r.id ? "bg-[#1B3326] border-[#3ED07A]/50" : "bg-[#16281F] border-transparent hover:border-[#2E4A3B]"
+              }`}
+            >
               <div className="flex items-center gap-3">
                 <r.icon size={17} className="text-[#3ED07A]" />
                 <span className="text-[#F3F3EF] text-sm">{r.name}</span>
               </div>
               <Pill tone={r.tone}>{r.eta}</Pill>
-            </div>
+            </button>
           ))}
         </div>
       </Card>
