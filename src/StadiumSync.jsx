@@ -214,17 +214,28 @@ function SectionLabel({ children }) {
 /* ------------------------------ ONBOARDING ---------------------------------- */
 
 function Onboarding({ onDone }) {
+  const [tab, setTab] = useState("fan");
   const [avatar, setAvatar] = useState("boy");
   const [name, setName] = useState("");
   const [ticket, setTicket] = useState("");
   const [ticketError, setTicketError] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState(false);
 
-  const enter = () => {
+  const enterFan = () => {
     if (ticket.trim().toUpperCase() !== FAN_TICKET) {
       setTicketError(true);
       return;
     }
-    onDone({ avatar, name: name.trim() || "Fan" });
+    onDone({ type: "fan", avatar, name: name.trim() || "Fan" });
+  };
+
+  const enterStaff = () => {
+    if (pin !== STAFF_PIN) {
+      setPinError(true);
+      return;
+    }
+    onDone({ type: "staff" });
   };
 
   return (
@@ -245,52 +256,102 @@ function Onboarding({ onDone }) {
         </div>
 
         <Card className="p-5">
-          <SectionLabel>Pick your avatar</SectionLabel>
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            {Object.entries(AVATARS).map(([id, { Comp, label, accent }]) => (
+          <div className="grid grid-cols-2 gap-2 mb-5 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5">
+            {[["fan", "Fan"], ["staff", "Organizer / Staff"]].map(([id, label]) => (
               <button
                 key={id}
-                onClick={() => setAvatar(id)}
-                className={`flex flex-col items-center gap-2.5 py-4 rounded-2xl border transition-all ${
-                  avatar === id ? "bg-[#16281F] border-[color:var(--ac)] scale-[1.02]" : "bg-transparent border-[#223328] hover:border-[#2E4A3B]"
-                }`}
-                style={{ "--ac": accent }}
+                onClick={() => setTab(id)}
+                className={`py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-1.5 ${tab === id ? "bg-[#3ED07A] text-[#0B140F]" : "text-[#8FA69B]"}`}
               >
-                <Comp size={64} ring={avatar === id} />
-                <span className={`text-sm font-semibold ${avatar === id ? "text-[#F3F3EF]" : "text-[#8FA69B]"}`}>{label}</span>
+                {id === "staff" && <Lock size={12} />}
+                {label}
               </button>
             ))}
           </div>
 
-          <SectionLabel>Your name</SectionLabel>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Sam"
-            maxLength={20}
-            className="w-full bg-[#16281F] border border-[#223328] rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none focus:border-[#3ED07A] mb-5"
-          />
+          {tab === "fan" ? (
+            <>
+              <SectionLabel>Pick your avatar</SectionLabel>
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                {Object.entries(AVATARS).map(([id, { Comp, label, accent }]) => (
+                  <button
+                    key={id}
+                    onClick={() => setAvatar(id)}
+                    className={`flex flex-col items-center gap-2.5 py-4 rounded-2xl border transition-all ${
+                      avatar === id ? "bg-[#16281F] border-[color:var(--ac)] scale-[1.02]" : "bg-transparent border-[#223328] hover:border-[#2E4A3B]"
+                    }`}
+                    style={{ "--ac": accent }}
+                  >
+                    <Comp size={64} ring={avatar === id} />
+                    <span className={`text-sm font-semibold ${avatar === id ? "text-[#F3F3EF]" : "text-[#8FA69B]"}`}>{label}</span>
+                  </button>
+                ))}
+              </div>
 
-          <SectionLabel>Ticket ID</SectionLabel>
-          <input
-            value={ticket}
-            onChange={(e) => { setTicket(e.target.value); setTicketError(false); }}
-            onKeyDown={(e) => e.key === "Enter" && enter()}
-            placeholder="e.g. WC26-118014"
-            className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 ${ticketError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
-          />
-          {ticketError ? (
-            <p className="text-[#FF6B5B] text-xs mb-3">Ticket ID not recognized — check your confirmation email.</p>
+              <SectionLabel>Your name</SectionLabel>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Sam"
+                maxLength={20}
+                className="w-full bg-[#16281F] border border-[#223328] rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none focus:border-[#3ED07A] mb-5"
+              />
+
+              <SectionLabel>Ticket ID</SectionLabel>
+              <input
+                value={ticket}
+                onChange={(e) => { setTicket(e.target.value); setTicketError(false); }}
+                onKeyDown={(e) => e.key === "Enter" && enterFan()}
+                placeholder="e.g. WC26-118014"
+                className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 ${ticketError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
+              />
+              {ticketError ? (
+                <p className="text-[#FF6B5B] text-xs mb-3">Ticket ID not recognized — check your confirmation email.</p>
+              ) : (
+                <p className="text-[#5A6B62] text-xs mb-3">Found on your match ticket confirmation.</p>
+              )}
+
+              <button
+                onClick={enterFan}
+                className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition"
+              >
+                Enter the stadium <ArrowRight size={16} />
+              </button>
+            </>
           ) : (
-            <p className="text-[#5A6B62] text-xs mb-3">Found on your match ticket confirmation.</p>
-          )}
+            <>
+              <div className="flex flex-col items-center text-center py-1 mb-5">
+                <div className="w-16 h-16 rounded-full overflow-hidden mb-3">
+                  <StaffAvatar size={64} />
+                </div>
+                <div className="text-[#F3F3EF] font-semibold text-sm">Organizer / Staff access</div>
+                <div className="text-[#8FA69B] text-xs mt-1">Enter the staff passcode to open the Ops Console.</div>
+              </div>
 
-          <button
-            onClick={enter}
-            className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition"
-          >
-            Enter the stadium <ArrowRight size={16} />
-          </button>
+              <SectionLabel>Passcode</SectionLabel>
+              <input
+                type="password"
+                inputMode="numeric"
+                value={pin}
+                onChange={(e) => { setPin(e.target.value); setPinError(false); }}
+                onKeyDown={(e) => e.key === "Enter" && enterStaff()}
+                placeholder="Passcode"
+                className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 ${pinError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
+              />
+              {pinError ? (
+                <p className="text-[#FF6B5B] text-xs mb-3">Incorrect passcode — try again.</p>
+              ) : (
+                <p className="text-[#5A6B62] text-xs mb-3">Provided by your venue supervisor.</p>
+              )}
+
+              <button
+                onClick={enterStaff}
+                className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition"
+              >
+                Unlock console <ArrowRight size={16} />
+              </button>
+            </>
+          )}
         </Card>
 
         <div className="mt-5 flex items-center justify-center gap-1.5 text-[10px] text-[#5A6B62]">
@@ -696,6 +757,7 @@ const STAFF_TABS = [
 ];
 
 export default function StadiumSync() {
+  const [entered, setEntered] = useState(false);
   const [profile, setProfile] = useState(null);
   const [role, setRole] = useState("fan");
   const [staffUnlocked, setStaffUnlocked] = useState(false);
@@ -707,8 +769,22 @@ export default function StadiumSync() {
   const active = tabs.find((t) => t.id === activeId) || tabs[0];
   const ActiveComponent = active.render;
 
-  if (!profile) {
-    return <Onboarding onDone={setProfile} />;
+  const handleOnboardingDone = (result) => {
+    if (result.type === "staff") {
+      setStaffUnlocked(true);
+      setProfile((p) => p || { avatar: "boy", name: "Staff" });
+      setRole("staff");
+      setActiveId(STAFF_TABS[0].id);
+    } else {
+      setProfile({ avatar: result.avatar, name: result.name });
+      setRole("fan");
+      setActiveId(FAN_TABS[0].id);
+    }
+    setEntered(true);
+  };
+
+  if (!entered) {
+    return <Onboarding onDone={handleOnboardingDone} />;
   }
 
   const HeaderAvatar = role === "fan" ? AVATARS[profile.avatar].Comp : StaffAvatar;

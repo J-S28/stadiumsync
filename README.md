@@ -2,7 +2,7 @@
 
 A GenAI-powered companion for fans, organizers, and venue staff at Estadio Azteca during the FIFA World Cup 2026 — built for the PromptWars Challenge 4: *Smart Stadiums & Tournament Operations*.
 
-**Live demo:** _add your Vercel URL here after deploying_
+**Live demo:** https://stadiumsync-sigma.vercel.app
 
 ---
 
@@ -29,9 +29,12 @@ Every fan interaction feeds the same operational picture staff are watching — 
 | Transport + post-match surge prediction | |
 | Accessibility (step-free routing, audio wayfinding) | |
 
-A lightweight onboarding flow lets each fan pick an avatar (mascot-style illustrated characters), a name, and a ticket ID, which then follows them through the app — the map, the header, and the assistant's chat bubbles.
+Onboarding starts with a role picker — **Fan** or **Organizer / Staff** — mirroring how a real deployment would separate fan entry from staff tooling from the first screen, not just inside the app:
 
-Both roles are gated, mirroring how a real deployment would separate fan entry from staff tooling:
+- **Fan tab:** pick an avatar (mascot-style illustrated characters), a name, and a ticket ID. The chosen avatar then follows the fan through the app — the map, the header, and the assistant's chat bubbles.
+- **Organizer / Staff tab:** enter the staff passcode and go straight to the Ops Console, no ticket required.
+
+Both roles stay gated after entry too — a fan who taps "Organizer / Staff" mid-session is still prompted for the passcode if they haven't unlocked it yet:
 
 | Role | Gate | Demo credential |
 |---|---|---|
