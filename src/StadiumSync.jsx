@@ -3,7 +3,7 @@ import {
   MapPin, Utensils, MessageCircle, Bus, Activity, Users, AlertTriangle,
   Leaf, Send, Navigation, Clock, TrendingUp, TrendingDown, Package,
   Volume2, Accessibility, ShieldCheck, ChevronRight, X, Plus, Minus,
-  Radio, Zap, Sparkles, ArrowRight
+  Radio, Zap, Sparkles, ArrowRight, Lock
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
@@ -21,6 +21,8 @@ Palette:
   --ivory:    #F3F3EF   (primary text)
   --mute:     #8FA69B   (secondary text)
 --------------------------------------------------------------------------- */
+
+const STAFF_PIN = "2026"; // demo-only gate for the staff console (see README)
 
 const ZONES = [
   { name: "Gate 3", density: 91, cap: 100 },
@@ -671,6 +673,10 @@ const STAFF_TABS = [
 export default function StadiumSync() {
   const [profile, setProfile] = useState(null);
   const [role, setRole] = useState("fan");
+  const [staffUnlocked, setStaffUnlocked] = useState(false);
+  const [pinPrompt, setPinPrompt] = useState(false);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState(false);
   const tabs = role === "fan" ? FAN_TABS : STAFF_TABS;
   const [activeId, setActiveId] = useState(tabs[0].id);
   const active = tabs.find((t) => t.id === activeId) || tabs[0];
@@ -683,8 +689,25 @@ export default function StadiumSync() {
   const HeaderAvatar = role === "fan" ? AVATARS[profile.avatar].Comp : StaffAvatar;
 
   const switchRole = (r) => {
+    if (r === "staff" && !staffUnlocked) {
+      setPinError(false);
+      setPin("");
+      setPinPrompt(true);
+      return;
+    }
     setRole(r);
     setActiveId(r === "fan" ? FAN_TABS[0].id : STAFF_TABS[0].id);
+  };
+
+  const submitPin = () => {
+    if (pin === STAFF_PIN) {
+      setStaffUnlocked(true);
+      setPinPrompt(false);
+      setRole("staff");
+      setActiveId(STAFF_TABS[0].id);
+    } else {
+      setPinError(true);
+    }
   };
 
   return (
@@ -712,12 +735,41 @@ export default function StadiumSync() {
             <button
               key={id}
               onClick={() => switchRole(id)}
-              className={`py-2.5 rounded-xl text-sm font-semibold transition ${role === id ? "bg-[#3ED07A] text-[#0B140F]" : "text-[#8FA69B]"}`}
+              className={`py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-1.5 ${role === id ? "bg-[#3ED07A] text-[#0B140F]" : "text-[#8FA69B]"}`}
             >
+              {id === "staff" && !staffUnlocked && <Lock size={12} />}
               {label}
             </button>
           ))}
         </div>
+
+        {pinPrompt && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setPinPrompt(false)}>
+            <div className="w-full max-w-xs bg-[#10201A] border border-[#223328] rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2 text-[#F3F3EF] font-semibold text-sm">
+                  <Lock size={15} className="text-[#FFC24B]" /> Staff access
+                </div>
+                <button onClick={() => setPinPrompt(false)} className="text-[#8FA69B] hover:text-[#F3F3EF]"><X size={16} /></button>
+              </div>
+              <p className="text-[#8FA69B] text-xs mb-4">Enter the staff passcode to view the Ops Console.</p>
+              <input
+                autoFocus
+                type="password"
+                inputMode="numeric"
+                value={pin}
+                onChange={(e) => { setPin(e.target.value); setPinError(false); }}
+                onKeyDown={(e) => e.key === "Enter" && submitPin()}
+                placeholder="Passcode"
+                className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 ${pinError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
+              />
+              {pinError && <p className="text-[#FF6B5B] text-xs mb-3">Incorrect passcode — try again.</p>}
+              <button onClick={submitPin} className="w-full bg-[#3ED07A] text-[#0B140F] rounded-full py-2.5 font-semibold text-sm hover:brightness-105 active:scale-[0.99] transition mt-1">
+                Unlock
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1 -mx-1 px-1">

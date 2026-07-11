@@ -31,6 +31,8 @@ Every fan interaction feeds the same operational picture staff are watching — 
 
 A lightweight onboarding flow lets each fan pick an avatar (mascot-style illustrated characters) and a name, which then follows them through the app — the map, the header, and the assistant's chat bubbles.
 
+Switching to the Organizer/Staff console is gated behind a passcode (`2026`) — a lightweight stand-in for what would be real staff authentication in production, so the ops dashboard isn't one tap away for every fan.
+
 ## How GenAI is used
 
 The in-app assistant (`AssistantTab`) is backed by **Claude (`claude-opus-4-8`)** via the Anthropic API — called from a Vercel serverless function (`api/assistant.js`), never directly from the browser, so the API key is never exposed to the client.
