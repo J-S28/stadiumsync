@@ -3,7 +3,7 @@ import {
   MapPin, Utensils, MessageCircle, Bus, Activity, Users, AlertTriangle,
   Leaf, Send, Navigation, Clock, TrendingUp, TrendingDown, Package,
   Volume2, Accessibility, ShieldCheck, ChevronRight, Plus, Minus,
-  Radio, Zap, Sparkles, ArrowRight, Lock, LogOut
+  Radio, Zap, Sparkles, ArrowRight, Lock, LogOut, CheckCircle2, X
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
@@ -316,14 +316,16 @@ function Onboarding({ onDone }) {
         </div>
 
         <Card className="p-5">
-          <div className="grid grid-cols-2 gap-2 mb-5 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5">
+          <div className="grid grid-cols-2 gap-2 mb-5 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5" role="tablist" aria-label="Choose your role">
             {[["fan", "Attendee"], ["staff", "Operations"]].map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setTab(id)}
-                className={`py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-1.5 ${tab === id ? "bg-[#3ED07A] text-[#0B140F]" : "text-[#8FA69B]"}`}
+                role="tab"
+                aria-selected={tab === id}
+                className={`py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${tab === id ? "bg-[#3ED07A] text-[#0B140F]" : "text-[#8FA69B]"}`}
               >
-                {id === "staff" && <Lock size={12} />}
+                {id === "staff" && <Lock size={12} aria-hidden="true" />}
                 {label}
               </button>
             ))}
@@ -337,7 +339,9 @@ function Onboarding({ onDone }) {
                   <button
                     key={id}
                     onClick={() => setAvatar(id)}
-                    className={`flex flex-col items-center gap-2.5 py-4 rounded-2xl border transition-all ${
+                    aria-pressed={avatar === id}
+                    aria-label={`${label} avatar`}
+                    className={`flex flex-col items-center gap-2.5 py-4 rounded-2xl border transition-all focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${
                       avatar === id ? "bg-[#16281F] border-[color:var(--ac)] scale-[1.02]" : "bg-transparent border-[#223328] hover:border-[#2E4A3B]"
                     }`}
                     style={{ "--ac": accent }}
@@ -354,7 +358,8 @@ function Onboarding({ onDone }) {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Sam"
                 maxLength={20}
-                className="w-full bg-[#16281F] border border-[#223328] rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none focus:border-[#3ED07A] mb-5"
+                aria-label="Your name"
+                className="w-full bg-[#16281F] border border-[#223328] rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none focus:border-[#3ED07A] mb-5 focus-visible:ring-2 focus-visible:ring-[#3ED07A]"
               />
 
               <SectionLabel>Ticket ID</SectionLabel>
@@ -363,19 +368,22 @@ function Onboarding({ onDone }) {
                 onChange={(e) => { setTicket(e.target.value); setTicketError(false); }}
                 onKeyDown={(e) => e.key === "Enter" && enterAttendee()}
                 placeholder="e.g. WC26-118014"
-                className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 ${ticketError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
+                aria-label="Ticket ID"
+                aria-invalid={ticketError}
+                aria-describedby="ticket-hint"
+                className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 focus-visible:ring-2 focus-visible:ring-[#3ED07A] ${ticketError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
               />
               {ticketError ? (
-                <p className="text-[#FF6B5B] text-xs mb-3">That doesn't look like a ticket ID — at least 6 letters/digits, found on your confirmation email.</p>
+                <p id="ticket-hint" role="alert" className="text-[#FF6B5B] text-xs mb-3">That doesn't look like a ticket ID — at least 6 letters/digits, found on your confirmation email.</p>
               ) : (
-                <p className="text-[#5A6B62] text-xs mb-3">Found on your match ticket confirmation, e.g. WC26-118014.</p>
+                <p id="ticket-hint" className="text-[#5A6B62] text-xs mb-3">Found on your match ticket confirmation, e.g. WC26-118014.</p>
               )}
 
               <button
                 onClick={enterAttendee}
-                className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition"
+                className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#3ED07A] focus-visible:outline-none"
               >
-                Enter the stadium <ArrowRight size={16} />
+                Enter the stadium <ArrowRight size={16} aria-hidden="true" />
               </button>
             </>
           ) : (
@@ -396,19 +404,22 @@ function Onboarding({ onDone }) {
                 onChange={(e) => { setPin(e.target.value); setPinError(false); }}
                 onKeyDown={(e) => e.key === "Enter" && enterStaff()}
                 placeholder="Passcode"
-                className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 ${pinError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
+                aria-label="Operations passcode"
+                aria-invalid={pinError}
+                aria-describedby="pin-hint"
+                className={`w-full bg-[#16281F] border rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none mb-2 focus-visible:ring-2 focus-visible:ring-[#3ED07A] ${pinError ? "border-[#FF6B5B]" : "border-[#223328] focus:border-[#3ED07A]"}`}
               />
               {pinError ? (
-                <p className="text-[#FF6B5B] text-xs mb-3">Incorrect passcode — try again.</p>
+                <p id="pin-hint" role="alert" className="text-[#FF6B5B] text-xs mb-3">Incorrect passcode — try again.</p>
               ) : (
-                <p className="text-[#5A6B62] text-xs mb-3">Provided by your venue supervisor. <span className="text-[#8FA69B]">(Demo passcode: {STAFF_PIN})</span></p>
+                <p id="pin-hint" className="text-[#5A6B62] text-xs mb-3">Provided by your venue supervisor. <span className="text-[#8FA69B]">(Demo passcode: {STAFF_PIN})</span></p>
               )}
 
               <button
                 onClick={enterStaff}
-                className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition"
+                className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 font-semibold flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#3ED07A] focus-visible:outline-none"
               >
-                Unlock console <ArrowRight size={16} />
+                Unlock console <ArrowRight size={16} aria-hidden="true" />
               </button>
             </>
           )}
@@ -528,9 +539,10 @@ function NavigateTab({ profile }) {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => setStepFree((v) => !v)}
-            className={`flex items-center gap-2.5 rounded-xl p-3 text-left transition ${stepFree ? "bg-[#16281F]" : "bg-[#16281F] opacity-60"}`}
+            aria-pressed={stepFree}
+            className={`flex items-center gap-2.5 rounded-xl p-3 text-left transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${stepFree ? "bg-[#16281F]" : "bg-[#16281F] opacity-60"}`}
           >
-            <Accessibility size={16} className={`shrink-0 ${stepFree ? "text-[#3ED07A]" : "text-[#8FA69B]"}`} />
+            <Accessibility size={16} className={`shrink-0 ${stepFree ? "text-[#3ED07A]" : "text-[#8FA69B]"}`} aria-hidden="true" />
             <div>
               <div className="text-sm text-[#F3F3EF] leading-tight">Step-free route</div>
               <div className="text-[11px] text-[#8FA69B]">{stepFree ? "Active — avoiding stairs" : "Off — standard route"}</div>
@@ -538,9 +550,10 @@ function NavigateTab({ profile }) {
           </button>
           <button
             onClick={toggleAudio}
-            className="flex items-center gap-2.5 bg-[#16281F] rounded-xl p-3 text-left transition"
+            aria-pressed={speaking}
+            className="flex items-center gap-2.5 bg-[#16281F] rounded-xl p-3 text-left transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"
           >
-            <Volume2 size={16} className={`shrink-0 ${speaking ? "text-[#3ED07A] animate-pulse" : "text-[#8FA69B]"}`} />
+            <Volume2 size={16} className={`shrink-0 ${speaking ? "text-[#3ED07A] animate-pulse" : "text-[#8FA69B]"}`} aria-hidden="true" />
             <div>
               <div className="text-sm text-[#F3F3EF] leading-tight">Audio wayfinding</div>
               <div className="text-[11px] text-[#8FA69B]">{speaking ? "Speaking… tap to stop" : "Tap to hear directions"}</div>
@@ -554,6 +567,7 @@ function NavigateTab({ profile }) {
 
 function OrderTab({ profile }) {
   const [cart, setCart] = useState({});
+  const [placedOrder, setPlacedOrder] = useState(null);
   const add = (id) => setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 }));
   const sub = (id) => setCart((c) => {
     const n = { ...c };
@@ -563,10 +577,31 @@ function OrderTab({ profile }) {
   const total = Object.entries(cart).reduce((s, [id, q]) => s + SNACKS.find((x) => x.id == id).price * q, 0);
   const count = Object.values(cart).reduce((a, b) => a + b, 0);
 
+  const placeOrder = () => {
+    const maxEta = Object.keys(cart).reduce((max, id) => {
+      const mins = parseInt(SNACKS.find((x) => x.id == id).eta, 10) || 0;
+      return Math.max(max, mins);
+    }, 0);
+    setPlacedOrder({ total, eta: maxEta });
+    setCart({});
+  };
+
   return (
     <div className="space-y-4 pb-20">
+      {placedOrder && (
+        <Card className="p-4 flex items-start gap-3 bg-[#3ED07A]/10 border-[#3ED07A]/30">
+          <CheckCircle2 size={18} className="text-[#3ED07A] shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="flex-1 text-sm text-[#F3F3EF] leading-relaxed">
+            Order placed — ${placedOrder.total.toFixed(2)} charged. Arriving at Section 118, Seat 14 in ~{placedOrder.eta} min.
+          </div>
+          <button onClick={() => setPlacedOrder(null)} aria-label="Dismiss order confirmation" className="text-[#8FA69B] hover:text-[#F3F3EF] shrink-0 focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none rounded">
+            <X size={16} aria-hidden="true" />
+          </button>
+        </Card>
+      )}
+
       <Card className="p-4 flex items-center gap-3 bg-gradient-to-r from-[#16281F] to-[#10201A]">
-        <Zap size={16} className="text-[#FFC24B] shrink-0" />
+        <Zap size={16} className="text-[#FFC24B] shrink-0" aria-hidden="true" />
         <div className="text-sm text-[#F3F3EF]">AI pick: <span className="text-[#FFC24B] font-medium">Churro + Dip</span> — shortest wait right now (3 min)</div>
       </Card>
 
@@ -577,18 +612,18 @@ function OrderTab({ profile }) {
               <div className="text-[#F3F3EF] font-medium">{s.name}</div>
               <div className="text-[#8FA69B] text-xs mt-0.5">{s.vendor} · ${s.price.toFixed(2)}</div>
               <div className="flex items-center gap-1 mt-1.5">
-                <Clock size={11} className="text-[#8FA69B]" />
+                <Clock size={11} className="text-[#8FA69B]" aria-hidden="true" />
                 <span className="text-[11px] text-[#8FA69B]">{s.eta} wait</span>
               </div>
             </div>
             {cart[s.id] ? (
               <div className="flex items-center gap-2.5 bg-[#16281F] rounded-full px-1 py-1 shrink-0">
-                <button onClick={() => sub(s.id)} className="w-7 h-7 rounded-full bg-[#223328] flex items-center justify-center text-[#F3F3EF]"><Minus size={13} /></button>
-                <span className="text-[#F3F3EF] text-sm w-4 text-center">{cart[s.id]}</span>
-                <button onClick={() => add(s.id)} className="w-7 h-7 rounded-full bg-[#3ED07A] flex items-center justify-center text-[#0B140F]"><Plus size={13} /></button>
+                <button onClick={() => sub(s.id)} aria-label={`Remove one ${s.name}`} className="w-7 h-7 rounded-full bg-[#223328] flex items-center justify-center text-[#F3F3EF] focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"><Minus size={13} aria-hidden="true" /></button>
+                <span className="text-[#F3F3EF] text-sm w-4 text-center" aria-live="polite">{cart[s.id]}</span>
+                <button onClick={() => add(s.id)} aria-label={`Add one more ${s.name}`} className="w-7 h-7 rounded-full bg-[#3ED07A] flex items-center justify-center text-[#0B140F] focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"><Plus size={13} aria-hidden="true" /></button>
               </div>
             ) : (
-              <button onClick={() => add(s.id)} className="shrink-0 px-4 py-2 rounded-full bg-[#3ED07A] text-[#0B140F] text-sm font-semibold">Add</button>
+              <button onClick={() => add(s.id)} aria-label={`Add ${s.name} to order`} className="shrink-0 px-4 py-2 rounded-full bg-[#3ED07A] text-[#0B140F] text-sm font-semibold focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none">Add</button>
             )}
           </Card>
         ))}
@@ -596,8 +631,11 @@ function OrderTab({ profile }) {
 
       {count > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm">
-          <button className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 px-5 flex items-center justify-between font-semibold shadow-xl shadow-black/40">
-            <span className="flex items-center gap-2"><Package size={17} /> Send to seat 118-14</span>
+          <button
+            onClick={placeOrder}
+            className="w-full bg-[#3ED07A] text-[#0B140F] rounded-2xl py-3.5 px-5 flex items-center justify-between font-semibold shadow-xl shadow-black/40 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#3ED07A] focus-visible:outline-none"
+          >
+            <span className="flex items-center gap-2"><Package size={17} aria-hidden="true" /> Send to seat 118-14</span>
             <span>${total.toFixed(2)}</span>
           </button>
         </div>
@@ -658,11 +696,13 @@ function AssistantTab({ profile }) {
   return (
     <div className="flex flex-col h-[520px]">
       <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
-        {[["en", "EN"], ["es", "ES"], ["pt", "PT"], ["fr", "FR"], ["de", "DE"]].map(([code, label]) => (
+        {[["en", "EN", "English"], ["es", "ES", "Spanish"], ["pt", "PT", "Portuguese"], ["fr", "FR", "French"], ["de", "DE", "German"]].map(([code, label, full]) => (
           <button
             key={code}
             onClick={() => selectLang(code)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition shrink-0 ${lang === code ? "bg-[#3ED07A] text-[#0B140F] border-[#3ED07A]" : "bg-transparent text-[#8FA69B] border-[#223328]"}`}
+            aria-pressed={lang === code}
+            aria-label={full}
+            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition shrink-0 focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${lang === code ? "bg-[#3ED07A] text-[#0B140F] border-[#3ED07A]" : "bg-transparent text-[#8FA69B] border-[#223328]"}`}
           >
             {label}
           </button>
@@ -709,11 +749,12 @@ function AssistantTab({ profile }) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
           placeholder="Ask about restrooms, exits, food..."
+          aria-label="Message the assistant"
           disabled={loading}
-          className="flex-1 bg-[#16281F] border border-[#223328] rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none focus:border-[#3ED07A] disabled:opacity-60"
+          className="flex-1 bg-[#16281F] border border-[#223328] rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none focus:border-[#3ED07A] disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-[#3ED07A]"
         />
-        <button onClick={send} disabled={loading} className="w-10 h-10 rounded-full bg-[#3ED07A] flex items-center justify-center shrink-0 hover:brightness-105 active:scale-95 transition disabled:opacity-60">
-          <Send size={16} className="text-[#0B140F]" />
+        <button onClick={send} disabled={loading} aria-label="Send message" className="w-10 h-10 rounded-full bg-[#3ED07A] flex items-center justify-center shrink-0 hover:brightness-105 active:scale-95 transition disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#3ED07A] focus-visible:outline-none">
+          <Send size={16} className="text-[#0B140F]" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -767,12 +808,13 @@ function TransportTab() {
             <button
               key={r.id}
               onClick={() => setSelected((s) => (s === r.id ? null : r.id))}
-              className={`w-full flex items-center justify-between rounded-xl p-3.5 text-left border transition ${
+              aria-pressed={selected === r.id}
+              className={`w-full flex items-center justify-between rounded-xl p-3.5 text-left border transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${
                 selected === r.id ? "bg-[#1B3326] border-[#3ED07A]/50" : "bg-[#16281F] border-transparent hover:border-[#2E4A3B]"
               }`}
             >
               <div className="flex items-center gap-3">
-                <r.icon size={17} className="text-[#3ED07A]" />
+                <r.icon size={17} className="text-[#3ED07A]" aria-hidden="true" />
                 <span className="text-[#F3F3EF] text-sm">{r.name}</span>
               </div>
               <Pill tone={r.tone}>{r.eta}</Pill>
@@ -782,9 +824,21 @@ function TransportTab() {
       </Card>
       <Card className="p-5">
         <SectionLabel>AI suggestion</SectionLabel>
-        <p className="text-sm text-[#F3F3EF] leading-relaxed">
+        <p className="text-sm text-[#F3F3EF] leading-relaxed mb-3">
           Post-match surge expected at Metro Blue Line in ~25 min. Leaving via Concourse S and taking Shuttle Line C now avoids the crowd and saves you roughly 15 minutes.
         </p>
+        {selected === "shuttle" ? (
+          <div className="flex items-center gap-1.5 text-[#3ED07A] text-xs font-semibold">
+            <CheckCircle2 size={13} aria-hidden="true" /> Shuttle Line C selected above
+          </div>
+        ) : (
+          <button
+            onClick={() => setSelected("shuttle")}
+            className="px-3.5 py-1.5 rounded-full bg-[#3ED07A] text-[#0B140F] text-xs font-semibold hover:brightness-105 active:scale-95 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#3ED07A] focus-visible:outline-none"
+          >
+            Use this route
+          </button>
+        )}
       </Card>
     </div>
   );
@@ -793,6 +847,7 @@ function TransportTab() {
 /* -------------------------------- STAFF VIEW -------------------------------- */
 
 function OpsPulseTab() {
+  const [dispatched, setDispatched] = useState(false);
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
@@ -831,9 +886,21 @@ function OpsPulseTab() {
       <Card className="p-5">
         <SectionLabel>AI-flagged signal</SectionLabel>
         <div className="flex items-start gap-2.5 bg-[#FF6B5B]/10 border border-[#FF6B5B]/25 rounded-xl p-3.5">
-          <AlertTriangle size={16} className="text-[#FF6B5B] mt-0.5 shrink-0" />
-          <div className="text-sm text-[#F3F3EF]">
+          <AlertTriangle size={16} className="text-[#FF6B5B] mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="text-sm text-[#F3F3EF] flex-1">
             <span className="font-medium">47 attendees</span> asked the assistant about "nearest exit" near Gate 4 in the last 6 minutes — a 5x spike. Recommend deploying 2 crowd marshals to Gate 4.
+            {dispatched ? (
+              <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold">
+                <CheckCircle2 size={13} aria-hidden="true" /> 2 marshals dispatched to Gate 4
+              </div>
+            ) : (
+              <button
+                onClick={() => setDispatched(true)}
+                className="mt-2.5 px-3.5 py-1.5 rounded-full bg-[#FF6B5B] text-[#0B140F] text-xs font-semibold hover:brightness-105 active:scale-95 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#FF6B5B] focus-visible:outline-none"
+              >
+                Deploy marshals
+              </button>
+            )}
           </div>
         </div>
       </Card>
@@ -874,6 +941,7 @@ function VendorLoadTab() {
 }
 
 function SustainabilityTab() {
+  const [dispatched, setDispatched] = useState(false);
   return (
     <div className="space-y-4">
       <Card className="p-5">
@@ -891,7 +959,7 @@ function SustainabilityTab() {
           <div className="space-y-2">
             {SUSTAIN_PIE.map((s, i) => (
               <div key={s.name} className="flex items-center gap-2 text-sm">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE_COLORS[i] }} />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE_COLORS[i] }} aria-hidden="true" />
                 <span className="text-[#F3F3EF]">{s.name}</span>
                 <span className="text-[#8FA69B]">{s.value}%</span>
               </div>
@@ -900,9 +968,21 @@ function SustainabilityTab() {
         </div>
       </Card>
       <Card className="p-5 flex items-start gap-2.5">
-        <Leaf size={17} className="text-[#3ED07A] mt-0.5 shrink-0" />
-        <div className="text-sm text-[#F3F3EF] leading-relaxed">
+        <Leaf size={17} className="text-[#3ED07A] mt-0.5 shrink-0" aria-hidden="true" />
+        <div className="text-sm text-[#F3F3EF] leading-relaxed flex-1">
           Compost bin near Fan Zone is 89% full — AI suggests routing next collection cart there first to keep diversion rate on target.
+          {dispatched ? (
+            <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold">
+              <CheckCircle2 size={13} aria-hidden="true" /> Collection cart routed to Fan Zone
+            </div>
+          ) : (
+            <button
+              onClick={() => setDispatched(true)}
+              className="mt-2.5 px-3.5 py-1.5 rounded-full bg-[#3ED07A] text-[#0B140F] text-xs font-semibold hover:brightness-105 active:scale-95 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#3ED07A] focus-visible:outline-none"
+            >
+              Dispatch cart
+            </button>
+          )}
         </div>
       </Card>
     </div>
@@ -978,26 +1058,29 @@ export default function StadiumSync() {
             <button
               onClick={exitToLanding}
               title="Switch role"
-              className="w-7 h-7 rounded-full bg-[#10201A] border border-[#223328] flex items-center justify-center text-[#8FA69B] hover:text-[#F3F3EF] hover:border-[#2E4A3B] transition shrink-0"
+              aria-label="Switch role — return to landing page"
+              className="w-7 h-7 rounded-full bg-[#10201A] border border-[#223328] flex items-center justify-center text-[#8FA69B] hover:text-[#F3F3EF] hover:border-[#2E4A3B] transition shrink-0 focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"
             >
-              <LogOut size={13} />
+              <LogOut size={13} aria-hidden="true" />
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1 -mx-1 px-1">
+        <div className="flex gap-1.5 mb-5 overflow-x-auto pb-1 -mx-1 px-1" role="tablist" aria-label="Sections">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setActiveId(t.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap border transition shrink-0 ${
+              role="tab"
+              aria-selected={activeId === t.id}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium whitespace-nowrap border transition shrink-0 focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${
                 activeId === t.id
                   ? "bg-[#3ED07A]/15 text-[#3ED07A] border-[#3ED07A]/40"
                   : "bg-transparent text-[#8FA69B] border-[#223328]"
               }`}
             >
-              <t.icon size={13} /> {t.label}
+              <t.icon size={13} aria-hidden="true" /> {t.label}
             </button>
           ))}
         </div>
