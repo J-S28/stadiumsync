@@ -133,7 +133,13 @@ export default async function handler(req, res) {
     const textBlock = response.content.find((b) => b.type === "text");
     return res.status(200).json({ reply: textBlock ? textBlock.text : "" });
   } catch (err) {
-    if (err instanceof Anthropic.AuthenticationError) {
+    // A missing/unset ANTHROPIC_API_KEY doesn't throw Anthropic.AuthenticationError
+    // (that's a 401 *response* from a request that was actually sent) — the SDK
+    // rejects it client-side, before any request, with a plain Error. Both cases
+    // mean the same thing operationally: the deployment needs a key configured.
+    const isMissingAuth = err instanceof Anthropic.AuthenticationError
+      || /could not resolve authentication method/i.test(err.message || "");
+    if (isMissingAuth) {
       console.error("Anthropic auth error — check ANTHROPIC_API_KEY:", err.message);
       return res.status(500).json({ error: "server_misconfigured" });
     }

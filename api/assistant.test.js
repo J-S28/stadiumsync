@@ -108,6 +108,17 @@ describe('POST /api/assistant', () => {
     expect(res.body.error).toBe('server_misconfigured');
   });
 
+  it('returns 500 when ANTHROPIC_API_KEY is unset (SDK rejects client-side, not as AuthenticationError)', async () => {
+    // This is the actual error the @anthropic-ai/sdk throws when no API key is
+    // configured — a plain Error, not an Anthropic.AuthenticationError, since
+    // it's rejected before any request is sent.
+    createMock.mockRejectedValue(new Error('Could not resolve authentication method. Expected one of apiKey, authToken...'));
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'hi' }] }, ip: '1.1.1.11' }), res);
+    expect(res.statusCode).toBe(500);
+    expect(res.body.error).toBe('server_misconfigured');
+  });
+
   it('returns 429 when Anthropic rate-limits the request', async () => {
     createMock.mockRejectedValue(new MockRateLimitError('slow down'));
     const res = mockRes();
