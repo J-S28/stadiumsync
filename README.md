@@ -153,11 +153,11 @@ npm run test:coverage # with a coverage report + enforced thresholds (currently 
 npm run test:e2e      # Playwright end-to-end + axe-core accessibility scans
 ```
 
-108 Vitest tests + 29 Playwright E2E tests = 137 total, all passing:
+109 Vitest tests + 29 Playwright E2E tests = 138 total, all passing:
 
 - **Unit tests** (`src/test/utils.test.js` — 20, `src/test/lib.test.js` — 21) cover the pure logic: language auto-detection, keyword-based scripted replies (attendee + protocol), zone density color thresholds, the ticket-ID format check, incident/comms/egress response parsing, the offline fallback banks, the `callAssistant` client (including its own empty-reply and non-ok-response branches), and the haptics wrapper (including graceful no-op when the Vibration API is unsupported).
 - **Component tests** (`src/test/StadiumSync.test.jsx` — 42) drive the app through React Testing Library: onboarding gates, the order → checkout → confirmation flow, transport route selection, the Ops Console's actionable AI suggestions, the accessibility toggles, and every one of the six new modules — Copilot, Incident Command, Egress, Match Hub, Access+, Fan Zone — covering the offline-fallback path, the live-API-success path, and edge interactions (Enter-key submission, replay/stop toggles, dismissing confirmations).
-- **API tests** (`api/assistant.test.js` — 25) mock the Anthropic SDK to cover method/validation errors, the success path, auth/rate-limit/upstream-error handling, the in-memory rate limiter, that each of the eight `mode` values selects the correct system prompt, and IP-resolution fallbacks (`x-forwarded-for` → `socket.remoteAddress` → `"unknown"`) — with no real network calls.
+- **API tests** (`api/assistant.test.js` — 26) mock the Anthropic SDK to cover method/validation errors, the success path, auth/rate-limit/upstream-error handling, the in-memory rate limiter (including its cap-triggered sweep of stale entries), that each of the eight `mode` values selects the correct system prompt, and IP-resolution fallbacks (`x-forwarded-for` → `socket.remoteAddress` → `"unknown"`) — with no real network calls.
 - **E2E tests** (`e2e/*.spec.js` — 29) run the built app in a real headless browser: the full attendee and operations journeys including all six new modules, plus five `@axe-core/playwright` scans (landing page, attendee Navigate tab, Ops Console, Match Hub, Incident Command) that currently report **zero WCAG 2.0/2.1 A/AA violations**, and a keyboard-only walkthrough of onboarding.
 
 Coverage thresholds (`vite.config.js`) are enforced, not just reported — `test:coverage` fails the run if statements/lines drop below 90%, functions below 90%, or branches below 80%.
@@ -170,6 +170,7 @@ CI runs all of the above — lint, unit tests with coverage, build, and E2E — 
 - **Shared modules split by kind, not just by reuse**: `src/shared/data.js` (pure data/logic), `src/shared/ui.jsx` (presentational components), and `src/shared/avatars.jsx` (the mascot SVGs, needed by both the main shell and the now-lazy `AssistantTab`) are separate files — the split also keeps each file Fast-Refresh-clean (no mixed component/non-component exports).
 - **Memoized list rows.** `SnackRow` (Order), `ZoneRow` (Navigate), and `RouteRow` (Transport) are wrapped in `React.memo` with stable (`useCallback`) handlers, so incrementing one cart item or toggling step-free routing re-renders only the row that changed, not the whole list.
 - **No dead weight.** Vite/CRA-scaffolding leftovers (`App.css`, unused image assets, an unreferenced `icons.svg`) were removed after confirming via grep that nothing imported them.
+- **Bounded server-side memory.** The assistant API's rate-limit `Map` tracks one entry per client key — on a long-warm serverless instance that would otherwise grow forever, one stale entry per unique caller it's ever seen. It now sweeps expired entries once the map exceeds a cap instead of paying that cost on every request.
 
 ## Accessibility
 

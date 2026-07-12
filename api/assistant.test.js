@@ -239,4 +239,17 @@ describe('POST /api/assistant', () => {
     expect(lastRes.statusCode).toBe(429);
     expect(lastRes.body.error).toBe('rate_limited');
   });
+
+  it('sweeps stale entries once the rate-limit map exceeds its cap, without breaking any client', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    // Drive the tracked-client count past RATE_LIMIT_MAP_CAP (500) with
+    // distinct IPs, each making a single request — none should be rate
+    // limited, and the sweep this triggers shouldn't throw or misfire.
+    for (let i = 0; i < 510; i++) {
+      const res = mockRes();
+      // eslint-disable-next-line no-await-in-loop
+      await handler(mockReq({ body: { messages: [{ role: 'user', text: 'hi' }] }, ip: `sweep-test-client-${i}` }), res);
+      expect(res.statusCode).toBe(200);
+    }
+  });
 });

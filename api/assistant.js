@@ -103,6 +103,11 @@ function toApiMessages(messages) {
 // abuse case for a demo deployment with no auth in front of this route.
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
+// A long-warm instance would otherwise accumulate one Map entry per unique
+// client IP it has ever seen, forever — most holding a single stale
+// timestamp nobody will look at again. Cap the map size and sweep expired
+// entries once it's exceeded, rather than paying that cost on every request.
+const RATE_LIMIT_MAP_CAP = 500;
 const requestLog = new Map();
 
 function isRateLimited(key) {
@@ -110,6 +115,15 @@ function isRateLimited(key) {
   const timestamps = (requestLog.get(key) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
   timestamps.push(now);
   requestLog.set(key, timestamps);
+
+  if (requestLog.size > RATE_LIMIT_MAP_CAP) {
+    for (const [k, times] of requestLog) {
+      const fresh = times.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+      if (fresh.length === 0) requestLog.delete(k);
+      else if (fresh.length !== times.length) requestLog.set(k, fresh);
+    }
+  }
+
   return timestamps.length > RATE_LIMIT_MAX_REQUESTS;
 }
 
