@@ -47,7 +47,7 @@ A second round of additions goes deeper on both sides — same "one AI layer, tw
 
 | Module | What it does | Honesty note |
 |---|---|---|
-| **Volunteer Copilot** (`CopilotTab`) | A protocol-lookup chat grounded in a demo operations-manual excerpt (lost child, rejected ticket, medical, spill, weather) — real Claude call, mode `protocol`. Plus a **Dynamic re-routing** card that pings nearby volunteers with a generated redirect brief when Ops Pulse flags a crowd spike. | The re-routing "ping" is a local simulation (same pattern as the existing Deploy Marshals/Dispatch Cart buttons), not a live push to real devices. |
+| **Volunteer Copilot** (`CopilotTab`) | A protocol-lookup chat grounded in a demo operations-manual excerpt (lost child, rejected ticket, medical, spill, weather) — real Claude call, mode `protocol`. Plus **Dynamic re-routing**: derives the most-congested zone from the same live `ZONES` data Ops Pulse reads (no hardcoded zone name), and on request generates a real, Claude-written redirect brief for nearby volunteers (mode `brief`). | The "ping" itself — actually reaching a volunteer's device — is necessarily simulated (no real volunteer devices exist in a demo); the brief text and the flagged zone are both genuinely live/generated, not static strings. |
 | **Incident Command** (`IncidentCommandTab`) | An **incident summarizer**: feeds independent mock reports (security feed, volunteer radio, social sentiment) to Claude (mode `incident`) and gets back one alert + a concrete deployment recommendation. Plus **Automated Comms**: generates a PA announcement and push notification in a chosen language (mode `comms`) from a one-line incident description. | The three source reports are demo data, not live feeds — the AI reasoning over them is real. |
 | **Egress Optimizer** (`EgressTab`) | Simulates a transit delay and shows how wayfinding guidance would adjust — pacing attendees toward a Fan Zone instead of a backed-up transit stop. | Fully local simulation, consistent with the rest of the Ops Console's actionable cards — no live transit API. |
 
@@ -82,13 +82,14 @@ These are stand-ins for real ticket verification and staff authentication — en
 
 ## How GenAI is used
 
-Every Claude call in the app goes through one Vercel serverless function (`api/assistant.js`), backed by **Claude (`claude-opus-4-8`)** via the Anthropic API — never called directly from the browser, so the API key is never exposed to the client. A validated `mode` enum selects one of five fixed system prompts server-side (`attendee`, `protocol`, `incident`, `comms`, `commentary`) — the client picks a mode, never the prompt text itself, so there's no path for user input to inject into what Claude is told to do:
+Every Claude call in the app goes through one Vercel serverless function (`api/assistant.js`), backed by **Claude (`claude-opus-4-8`)** via the Anthropic API — never called directly from the browser, so the API key is never exposed to the client. A validated `mode` enum selects one of six fixed system prompts server-side (`attendee`, `protocol`, `incident`, `comms`, `commentary`, `brief`) — the client picks a mode, never the prompt text itself, so there's no path for user input to inject into what Claude is told to do:
 
 - **`attendee`** (`AssistantTab`) — grounds every answer in the stadium's actual live state (zone density, gate congestion, vendor wait times, transit ETAs) and always replies in whatever language the attendee just typed in, not just the five UI pills (EN/ES/PT/FR/DE).
 - **`protocol`** (`CopilotTab`, staff) — answers volunteer questions from a demo operations-manual excerpt (lost child, rejected ticket, medical, spill, weather), escalating to a supervisor rather than guessing outside that excerpt.
 - **`incident`** (`IncidentCommandTab`, staff) — aggregates independent mock reports into one alert and a concrete deployment recommendation.
 - **`comms`** (`IncidentCommandTab`, staff) — generates a PA announcement and push notification in a chosen language from a short incident description.
 - **`commentary`** (`MatchHubTab`, attendee) — generates tactical or team-biased match commentary, playable aloud via Speech Synthesis.
+- **`brief`** (`CopilotTab`, staff) — generates a short, radio-style redirect brief for volunteers, given the zone Ops Pulse's live density data currently flags as most congested.
 
 Every mode falls back to a scripted offline response (`src/lib/{assistant,protocol,incident,commentary}.js`) if the API is unreachable — no key configured, offline, or rate-limited — so the demo never breaks mid-presentation.
 

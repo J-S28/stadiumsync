@@ -301,14 +301,37 @@ describe('Volunteer Copilot tab (Ops Console)', () => {
     }
   });
 
-  it('sends a dynamic re-routing brief to nearby volunteers', async () => {
+  it('flags the most congested zone from live data and sends a re-routing brief with the offline fallback', async () => {
     const user = userEvent.setup();
     await enterAsOperations(user);
     await screen.findByText('Ops Console');
     await user.click(screen.getByRole('tab', { name: /copilot/i }));
 
-    await user.click(await screen.findByRole('button', { name: /ping nearby volunteers/i }));
-    expect(await screen.findByText(/brief sent/i)).toBeInTheDocument();
+    // Gate 4 (97%) is the most congested zone in ZONES — the card derives
+    // this rather than hardcoding a zone name.
+    expect(await screen.findByText(/crowd spike at Gate 4 \(97% capacity\)/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /ping nearby volunteers/i }));
+    expect(await screen.findByText(/brief sent: "Redirect to Gate 4/i)).toBeInTheDocument();
+  });
+
+  it('uses the real AI-generated brief when the network call succeeds', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ reply: 'All units: divert to Gate 4, crowd building fast.' }),
+    });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /copilot/i }));
+
+      await user.click(await screen.findByRole('button', { name: /ping nearby volunteers/i }));
+      expect(await screen.findByText(/all units: divert to gate 4, crowd building fast/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });
 

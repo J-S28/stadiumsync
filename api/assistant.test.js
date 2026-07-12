@@ -162,6 +162,13 @@ describe('POST /api/assistant', () => {
     expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('Spanish') }));
   });
 
+  it('uses the dispatch-brief system prompt for mode "brief"', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'Gate 4 at 97% — crowd spike' }], mode: 'brief' }, ip: '1.1.2.8' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('dispatch-brief generator') }));
+  });
+
   it('uses the biased commentary system prompt for mode "commentary" with style "biased"', async () => {
     createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
     const res = mockRes();

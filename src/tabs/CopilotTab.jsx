@@ -1,8 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Users, CheckCircle2 } from "lucide-react";
 import { Card, SectionLabel, AIBadge } from "../shared/ui.jsx";
+import { ZONES } from "../shared/data.js";
 import { callAssistant } from "../lib/callAssistant.js";
 import { pickProtocolReply } from "../lib/protocol.js";
+import { hapticDispatch } from "../lib/haptics.js";
+
+// Same threshold densityColor() uses for "red" — a zone this congested is
+// the crowd-spike signal Ops Pulse surfaces, so Dynamic Re-routing reacts
+// to the same live data instead of a hardcoded zone name.
+const SPIKE_THRESHOLD = 90;
+
+function fallbackBrief(zoneName) {
+  return `Redirect to ${zoneName} — crowd spike, assist with flow control. ETA 2 min.`;
+}
 
 export default function CopilotTab() {
   const [messages, setMessages] = useState([
@@ -11,9 +22,14 @@ export default function CopilotTab() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [pinged, setPinged] = useState(false);
+  const [pinging, setPinging] = useState(false);
+  const [brief, setBrief] = useState(null);
   const endRef = useRef(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+
+  const flaggedZone = ZONES.reduce((max, z) => (z.density > max.density ? z : max), ZONES[0]);
+  const isSpiking = flaggedZone.density >= SPIKE_THRESHOLD;
 
   const send = async () => {
     if (!input.trim() || loading) return;
@@ -30,6 +46,26 @@ export default function CopilotTab() {
       setMessages((m) => [...m, { from: "bot", text: pickProtocolReply(userMsg.text) }]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const pingVolunteers = async () => {
+    setPinging(true);
+    hapticDispatch();
+    try {
+      const reply = await callAssistant({
+        mode: "brief",
+        messages: [{
+          role: "user",
+          text: `${flaggedZone.name} is at ${flaggedZone.density}% capacity — a crowd spike just flagged by Ops Pulse. 3 volunteers are stationed near Concourse S.`,
+        }],
+      });
+      setBrief(reply || fallbackBrief(flaggedZone.name));
+    } catch {
+      setBrief(fallbackBrief(flaggedZone.name));
+    } finally {
+      setPinging(false);
+      setPinged(true);
     }
   };
 
@@ -72,24 +108,31 @@ export default function CopilotTab() {
           <SectionLabel>Dynamic re-routing</SectionLabel>
           <AIBadge label="AI brief" />
         </div>
-        <div className="flex items-start gap-2.5 bg-[#FFC24B]/10 border border-[#FFC24B]/25 rounded-xl p-3.5">
-          <Users size={16} className="text-[#FFC24B] mt-0.5 shrink-0" aria-hidden="true" />
-          <div className="text-sm text-[#F3F3EF] flex-1">
-            Ops Pulse flagged a crowd spike at Gate 4. 3 volunteers near Concourse S are the closest available.
-            {pinged ? (
-              <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold" role="status">
-                <CheckCircle2 size={13} aria-hidden="true" /> Brief sent: "Redirect to Gate 4 — crowd spike, assist with flow control. ETA 2 min."
-              </div>
-            ) : (
-              <button
-                onClick={() => setPinged(true)}
-                className="mt-2.5 px-3.5 py-1.5 rounded-full bg-[#FFC24B] text-[#0B140F] text-xs font-semibold hover:brightness-105 active:scale-95 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#FFC24B] focus-visible:outline-none"
-              >
-                Ping nearby volunteers
-              </button>
-            )}
+        {isSpiking ? (
+          <div className="flex items-start gap-2.5 bg-[#FFC24B]/10 border border-[#FFC24B]/25 rounded-xl p-3.5">
+            <Users size={16} className="text-[#FFC24B] mt-0.5 shrink-0" aria-hidden="true" />
+            <div className="text-sm text-[#F3F3EF] flex-1">
+              Ops Pulse flagged a crowd spike at {flaggedZone.name} ({flaggedZone.density}% capacity). 3 volunteers near Concourse S are the closest available.
+              {pinged ? (
+                <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold" role="status">
+                  <CheckCircle2 size={13} aria-hidden="true" /> Brief sent: "{brief}"
+                </div>
+              ) : (
+                <button
+                  onClick={pingVolunteers}
+                  disabled={pinging}
+                  className="mt-2.5 px-3.5 py-1.5 rounded-full bg-[#FFC24B] text-[#0B140F] text-xs font-semibold hover:brightness-105 active:scale-95 transition disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#FFC24B] focus-visible:outline-none"
+                >
+                  {pinging ? "Generating brief…" : "Ping nearby volunteers"}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-[#8FA69B]" role="status">
+            <CheckCircle2 size={14} className="text-[#3ED07A]" aria-hidden="true" /> No active crowd spikes — no redirect needed right now.
+          </div>
+        )}
       </Card>
     </div>
   );
