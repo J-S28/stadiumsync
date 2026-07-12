@@ -76,10 +76,29 @@ test.describe('Operations dashboard', () => {
     await expect(page.getByText(/for a faster exit, please use concourse s/i)).toBeVisible();
   });
 
-  test('simulates a transit delay in the Egress tab', async ({ page }) => {
+  test('simulates a transit delay and auto-generates AI wayfinding + signage guidance', async ({ page }) => {
     await enterAsOperations(page);
     await page.getByRole('tab', { name: /egress/i }).click();
     await page.getByRole('button', { name: /simulate transit delay/i }).click();
-    await expect(page.getByText(/transit delay detected/i)).toBeVisible();
+    await expect(page.getByText(/wayfinding updated to pace attendees toward zócalo fan fest/i)).toBeVisible();
+    await expect(page.getByText(/metro delayed — wait at zócalo fan fest/i)).toBeVisible();
+  });
+
+  test('the simulated transit delay updates the attendee Transport tab live, in the same session', async ({ page }) => {
+    await enterAsOperations(page);
+    await page.getByRole('tab', { name: /egress/i }).click();
+    await page.getByRole('button', { name: /simulate transit delay/i }).click();
+    await expect(page.getByText(/digital signage preview/i)).toBeVisible();
+
+    await page.getByRole('button', { name: /switch role/i }).click();
+    await page.getByRole('button', { name: /boy avatar/i }).click();
+    await page.getByLabel(/your name/i).fill('Leo');
+    await page.getByLabel(/ticket id/i).fill('WC26-118014');
+    await page.getByRole('button', { name: /enter the stadium/i }).click();
+    await expect(page.getByText('Hey, Leo')).toBeVisible();
+
+    await page.getByRole('tab', { name: /transport/i }).click();
+    await expect(page.getByText(/egress optimizer:/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /metro — blue line/i })).toContainText(/delayed 12 min/i);
   });
 });

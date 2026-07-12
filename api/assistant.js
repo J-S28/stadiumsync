@@ -36,6 +36,10 @@ If the reports don't clearly point to one incident, say so plainly on the Alert 
 
 const BRIEF_CONTEXT = `You are the StadiumSync Volunteer Copilot's dispatch-brief generator. Given the crowd-spike situation described in the latest message, write ONE short redirect brief for nearby volunteers — imperative, radio-style, under 20 words, naming the destination zone and the reason. Reply with just the brief itself, no extra commentary, no quotation marks.`;
 
+const EGRESS_CONTEXT = `You are the StadiumSync Egress Optimizer. Given the transit delay situation in the latest message, write two things: an updated wayfinding guidance line for attendees (1-2 sentences, redirecting them to wait at the named Fan Zone instead of queuing at the delayed transit line) and a short digital-signage message (under 60 characters, in the imperative, suitable for a stadium concourse display). Reply in exactly this format with no extra commentary:
+WAYFINDING: <guidance>
+SIGNAGE: <message>`;
+
 const LANG_NAMES = { en: "English", es: "Spanish", pt: "Portuguese", fr: "French", de: "German" };
 
 function commsPrompt(lang) {
@@ -52,7 +56,7 @@ function commentaryPrompt(style) {
   return `You are a calm, technical FIFA World Cup 2026 match analyst providing tactical commentary for a fan using StadiumSync. Given the play-by-play moment in the latest message, explain the tactical significance — formation, positioning, decision-making — in 2-3 sentences of clear, precise, spoken-word analysis, ready to read aloud.`;
 }
 
-const MODES = ["attendee", "protocol", "incident", "comms", "commentary", "brief"];
+const MODES = ["attendee", "protocol", "incident", "comms", "commentary", "brief", "egress"];
 
 function systemPromptFor(mode, { lang, style }) {
   switch (mode) {
@@ -60,6 +64,7 @@ function systemPromptFor(mode, { lang, style }) {
     case "incident": return INCIDENT_CONTEXT;
     case "comms": return commsPrompt(lang);
     case "brief": return BRIEF_CONTEXT;
+    case "egress": return EGRESS_CONTEXT;
     case "commentary": return commentaryPrompt(style);
     default: return STADIUM_CONTEXT;
   }

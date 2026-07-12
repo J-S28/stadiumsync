@@ -169,6 +169,13 @@ describe('POST /api/assistant', () => {
     expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('dispatch-brief generator') }));
   });
 
+  it('uses the egress optimizer system prompt for mode "egress"', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'Metro Blue Line delayed 12 minutes' }], mode: 'egress' }, ip: '1.1.2.9' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('Egress Optimizer') }));
+  });
+
   it('uses the biased commentary system prompt for mode "commentary" with style "biased"', async () => {
     createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
     const res = mockRes();

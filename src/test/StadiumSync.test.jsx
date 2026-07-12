@@ -374,7 +374,7 @@ describe('Incident Command tab (Ops Console)', () => {
 });
 
 describe('Egress tab (Ops Console)', () => {
-  it('simulates a transit delay and shows adjusted pacing guidance', async () => {
+  it('simulates a transit delay and automatically generates AI wayfinding + signage guidance', async () => {
     const user = userEvent.setup();
     await enterAsOperations(user);
     await screen.findByText('Ops Console');
@@ -382,8 +382,59 @@ describe('Egress tab (Ops Console)', () => {
 
     const toggle = await screen.findByRole('button', { name: /simulate transit delay/i });
     await user.click(toggle);
-    expect(await screen.findByText(/transit delay detected/i)).toBeInTheDocument();
+    // No separate "generate" step — the AI call fires automatically off the toggle.
+    expect(await screen.findByText(/wayfinding updated to pace attendees toward zócalo fan fest/i)).toBeInTheDocument();
     expect(screen.getByText('12 min delay')).toBeInTheDocument();
+    expect(screen.getByText(/metro delayed — wait at zócalo fan fest/i)).toBeInTheDocument();
+  });
+
+  it('uses the real AI-generated update when the network call succeeds', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ reply: 'WAYFINDING: Head to Zócalo Fan Fest, Metro is backed up.\nSIGNAGE: USE ZÓCALO FAN FEST' }),
+    });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /egress/i }));
+      await user.click(await screen.findByRole('button', { name: /simulate transit delay/i }));
+
+      expect(await screen.findByText(/head to zócalo fan fest, metro is backed up/i)).toBeInTheDocument();
+      expect(screen.getByText('USE ZÓCALO FAN FEST')).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('feeds the simulated delay into the attendee Transport tab live, in the same session', async () => {
+    // enterAsOperations/enterAsAttendee each call renderApp(), which would
+    // mount a fresh, independent StadiumSync instance — the opposite of what
+    // this test needs to prove. Render once and drive both roles by hand so
+    // `transitDelayed` genuinely persists across the role switch.
+    const user = userEvent.setup();
+    renderApp();
+
+    await user.click(screen.getByRole('tab', { name: /operations/i }));
+    await user.type(screen.getByLabelText(/operations passcode/i), '2026');
+    await user.click(screen.getByRole('button', { name: /unlock console/i }));
+    await screen.findByText('Ops Console');
+
+    await user.click(screen.getByRole('tab', { name: /egress/i }));
+    await user.click(await screen.findByRole('button', { name: /simulate transit delay/i }));
+    await screen.findByText(/digital signage preview/i);
+
+    await user.click(screen.getByRole('button', { name: /switch role/i }));
+    await user.click(await screen.findByRole('button', { name: /boy avatar/i }));
+    await user.type(screen.getByLabelText(/your name/i), 'Leo');
+    await user.type(screen.getByLabelText(/ticket id/i), 'WC26-118014');
+    await user.click(screen.getByRole('button', { name: /enter the stadium/i }));
+    await screen.findByText('Hey, Leo');
+
+    await user.click(await screen.findByRole('tab', { name: /transport/i }));
+    expect(await screen.findByText(/egress optimizer:/i)).toBeInTheDocument();
+    expect(screen.getByText(/metro — blue line/i).closest('button')).toHaveTextContent(/delayed 12 min/i);
   });
 });
 

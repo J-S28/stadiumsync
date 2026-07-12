@@ -679,20 +679,35 @@ const RouteRow = memo(function RouteRow({ route, isSelected, onToggle }) {
   );
 });
 
-function TransportTab() {
+function TransportTab({ transitDelayed }) {
   const [selected, setSelected] = useState(null);
-  const active = TRANSPORT_ROUTES.find((r) => r.id === selected);
+  // The Ops Console's Egress Optimizer flips this shared flag — when it's
+  // on, Metro Blue Line's own entry reflects the delay directly instead of
+  // this tab having its own separate idea of what's happening.
+  const routes = transitDelayed
+    ? TRANSPORT_ROUTES.map((r) => (r.id === "metro" ? { ...r, eta: "delayed 12 min", tone: "alert" } : r))
+    : TRANSPORT_ROUTES;
+  const active = routes.find((r) => r.id === selected);
   const toggleRoute = useCallback((id) => setSelected((s) => (s === id ? null : id)), []);
 
   return (
     <div className="space-y-4">
+      {transitDelayed && (
+        <Card className="p-4 flex items-start gap-2.5 bg-[#FF6B5B]/10 border-[#FF6B5B]/25">
+          <AlertTriangle size={16} className="text-[#FF6B5B] mt-0.5 shrink-0" aria-hidden="true" />
+          <div className="text-sm text-[#F3F3EF] flex-1">
+            <span className="font-medium">Egress Optimizer:</span> Metro Blue Line is delayed. Wayfinding updated to pace you toward Zócalo Fan Fest instead of queuing at the platform.
+          </div>
+        </Card>
+      )}
+
       <Card className="p-5">
         <SectionLabel>Routes from the stadium</SectionLabel>
         <svg viewBox="0 0 320 150" className="w-full h-36 rounded-xl bg-[#0B140F] mb-1">
           <ellipse cx="160" cy="118" rx="60" ry="20" fill="none" stroke="#223328" strokeWidth="2" />
           <ellipse cx="160" cy="118" rx="38" ry="12" fill="#16281F" stroke="#3ED07A" strokeWidth="1.2" opacity="0.5" />
 
-          {TRANSPORT_ROUTES.map((r) => {
+          {routes.map((r) => {
             const isSelected = r.id === selected;
             const dimmed = selected && !isSelected;
             const color = r.tone === "alert" ? "#FFC24B" : "#3ED07A";
@@ -723,7 +738,7 @@ function TransportTab() {
       <Card className="p-5">
         <SectionLabel>Get home</SectionLabel>
         <div className="space-y-3">
-          {TRANSPORT_ROUTES.map((r) => (
+          {routes.map((r) => (
             <RouteRow key={r.id} route={r} isSelected={selected === r.id} onToggle={toggleRoute} />
           ))}
         </div>
@@ -782,6 +797,11 @@ export default function StadiumSync() {
   const [activeId, setActiveId] = useState(tabs[0].id);
   const active = tabs.find((t) => t.id === activeId) || tabs[0];
   const ActiveComponent = active.render;
+  // Lifted here (not local to EgressTab) so toggling it in the Ops Console's
+  // Egress tab actually changes what the attendee Transport tab shows —
+  // one shared signal, two views, matching how the rest of the app treats
+  // operations state as feeding the attendee experience live.
+  const [transitDelayed, setTransitDelayed] = useState(false);
 
   const handleOnboardingDone = (result) => {
     if (result.type === "staff") {
@@ -861,7 +881,7 @@ export default function StadiumSync() {
         {/* Active panel */}
         <main id="main-content">
           <Suspense fallback={<div className="text-center text-[#8FA69B] text-sm py-10" role="status">Loading…</div>}>
-            <ActiveComponent profile={profile} />
+            <ActiveComponent profile={profile} transitDelayed={transitDelayed} setTransitDelayed={setTransitDelayed} />
           </Suspense>
         </main>
 

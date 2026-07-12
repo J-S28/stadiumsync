@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { pickProtocolReply } from '../lib/protocol.js';
 import { parseIncidentSummary, parseComms, RAW_REPORTS, INCIDENT_FALLBACK, COMMS_FALLBACK } from '../lib/incident.js';
 import { COMMENTARY_FALLBACK } from '../lib/commentary.js';
+import { parseEgressUpdate, EGRESS_FALLBACK } from '../lib/egress.js';
 import { callAssistant } from '../lib/callAssistant.js';
 import { hapticTick, hapticDispatch, hapticSnap } from '../lib/haptics.js';
 
@@ -77,6 +78,27 @@ describe('incident/comms fallback data', () => {
     expect(INCIDENT_FALLBACK.deployment).toBeTruthy();
     expect(COMMS_FALLBACK.pa).toBeTruthy();
     expect(COMMS_FALLBACK.push).toBeTruthy();
+  });
+});
+
+describe('parseEgressUpdate', () => {
+  it('extracts the wayfinding and signage lines', () => {
+    const text = 'WAYFINDING: Head to Zócalo Fan Fest.\nSIGNAGE: USE ZÓCALO FAN FEST';
+    expect(parseEgressUpdate(text)).toEqual({
+      wayfinding: 'Head to Zócalo Fan Fest.',
+      signage: 'USE ZÓCALO FAN FEST',
+    });
+  });
+
+  it('falls back to the raw text as the wayfinding line when the format is unexpected', () => {
+    const result = parseEgressUpdate('unstructured model output');
+    expect(result.wayfinding).toBe('unstructured model output');
+    expect(result.signage).toBe('');
+  });
+
+  it('exposes a complete offline fallback', () => {
+    expect(EGRESS_FALLBACK.wayfinding).toBeTruthy();
+    expect(EGRESS_FALLBACK.signage).toBeTruthy();
   });
 });
 
