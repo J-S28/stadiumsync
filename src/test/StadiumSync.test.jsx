@@ -87,7 +87,8 @@ describe('Order tab', () => {
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /order/i }));
 
-    const firstAdd = screen.getAllByRole('button', { name: /add .* to order/i })[0];
+    // OrderTab is lazy-loaded — wait for it to resolve.
+    const firstAdd = (await screen.findAllByRole('button', { name: /add .* to order/i }))[0];
     await user.click(firstAdd);
 
     const checkoutButton = await screen.findByRole('button', { name: /send to seat/i });
@@ -102,7 +103,7 @@ describe('Order tab', () => {
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /order/i }));
 
-    await user.click(screen.getAllByRole('button', { name: /add .* to order/i })[0]);
+    await user.click((await screen.findAllByRole('button', { name: /add .* to order/i }))[0]);
     await user.click(await screen.findByRole('button', { name: /send to seat/i }));
     await screen.findByText(/order placed/i);
 
@@ -117,7 +118,8 @@ describe('Transport tab', () => {
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /transport/i }));
 
-    const rideshareButton = screen.getByRole('button', { name: /rideshare pickup b2/i });
+    // TransportTab is lazy-loaded — wait for it to resolve.
+    const rideshareButton = await screen.findByRole('button', { name: /rideshare pickup b2/i });
     await user.click(rideshareButton);
     expect(await screen.findByText(/showing rideshare pickup b2/i)).toBeInTheDocument();
     expect(rideshareButton).toHaveAttribute('aria-pressed', 'true');
@@ -130,7 +132,7 @@ describe('Transport tab', () => {
     const user = userEvent.setup();
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /transport/i }));
-    await user.click(screen.getByRole('button', { name: /use this route/i }));
+    await user.click(await screen.findByRole('button', { name: /use this route/i }));
     expect(await screen.findByText(/showing shuttle line c/i)).toBeInTheDocument();
   });
 });
@@ -187,7 +189,8 @@ describe('Assistant tab', () => {
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /assistant/i }));
 
-    const input = screen.getByLabelText(/message the assistant/i);
+    // AssistantTab is lazy-loaded — wait for it to resolve.
+    const input = await screen.findByLabelText(/message the assistant/i);
     await user.type(input, 'where is the nearest exit');
     await user.click(screen.getByRole('button', { name: /send message/i }));
 
@@ -199,7 +202,7 @@ describe('Assistant tab', () => {
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /assistant/i }));
 
-    const input = screen.getByLabelText(/message the assistant/i);
+    const input = await screen.findByLabelText(/message the assistant/i);
     // fireEvent.change avoids userEvent.type's per-key simulation, which
     // doesn't reliably handle accented/special characters (¿, ó, ñ).
     fireEvent.change(input, { target: { value: '¿Dónde está el baño más cercano?' } });
@@ -216,7 +219,7 @@ describe('Assistant tab', () => {
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /assistant/i }));
 
-    await user.click(screen.getByRole('button', { name: 'French' }));
+    await user.click(await screen.findByRole('button', { name: 'French' }));
     expect(await screen.findByText(/assistant StadiumSync/i)).toBeInTheDocument();
   });
 
@@ -230,7 +233,7 @@ describe('Assistant tab', () => {
       const user = userEvent.setup();
       await enterAsAttendee(user);
       await user.click(await screen.findByRole('tab', { name: /assistant/i }));
-      const input = screen.getByLabelText(/message the assistant/i);
+      const input = await screen.findByLabelText(/message the assistant/i);
       await user.type(input, 'any food nearby?');
       await user.click(screen.getByRole('button', { name: /send message/i }));
       expect(await screen.findByText(/Churro \+ Dip has the shortest wait/i)).toBeInTheDocument();
@@ -259,7 +262,7 @@ describe('Order tab cart controls', () => {
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /order/i }));
 
-    const addButton = screen.getAllByRole('button', { name: /add .* to order/i })[0];
+    const addButton = (await screen.findAllByRole('button', { name: /add .* to order/i }))[0];
     await user.click(addButton);
 
     const increment = screen.getByRole('button', { name: /add one more/i });
@@ -278,7 +281,7 @@ describe('Order tab cart controls', () => {
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /order/i }));
 
-    await user.click(screen.getByRole('button', { name: /add ai pick, churro \+ dip, to order/i }));
+    await user.click(await screen.findByRole('button', { name: /add ai pick, churro \+ dip, to order/i }));
     expect(await screen.findByRole('button', { name: /remove one churro \+ dip/i })).toBeInTheDocument();
   });
 });

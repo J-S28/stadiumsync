@@ -4,6 +4,12 @@
 // library — that's what keeps the code-split boundary effective. Split
 // from UI components (see ./ui.jsx) so this file exports non-component
 // values only, which keeps Fast Refresh working cleanly on both files.
+import { BoyAvatar, GirlAvatar } from "./avatars.jsx";
+
+export const AVATARS = {
+  boy: { Comp: BoyAvatar, label: "Boy", accent: "#3ED07A" },
+  girl: { Comp: GirlAvatar, label: "Girl", accent: "#FFC24B" },
+};
 
 export const ZONES = [
   { name: "Gate 3", density: 91, cap: 100 },

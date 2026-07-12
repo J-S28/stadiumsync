@@ -108,19 +108,20 @@ Browser (React SPA)
   │
   ├─ Attendee tabs: Navigate · Order · Assistant · Transport · Match Hub · Access+ · Fan Zone
   ├─ Operations tabs: Ops Pulse · Vendors · Sustainability · Copilot · Incident Command · Egress
-  │  (every tab beyond Navigate/Order/Assistant/Transport is code-split, lazy-loaded)
+  │  (every tab except Navigate is code-split, lazy-loaded)
   │
   └─ POST /api/assistant  ──────────────►  Vercel serverless function
                                               │  · Zod-validates the request body
                                               │  · rate-limits per client
                                               │  · mode ∈ {attendee, protocol, incident,
-                                              │    comms, commentary} selects one of five
+                                              │    comms, commentary, brief, egress,
+                                              │    sensory} selects one of eight
                                               │    fixed system prompts server-side
                                               ▼
                                             Anthropic API (claude-opus-4-8)
 ```
 
-The Recharts-based tabs (Ops Pulse, Vendors, Sustainability) are dynamically `import()`ed — attendees never load the charting library at all. Every other new tab (Copilot, Incident Command, Egress, Match Hub, Access+, Fan Zone) is lazy-loaded too, so opening a tab you never visit costs nothing. See [Performance](#performance) below.
+The Recharts-based tabs (Ops Pulse, Vendors, Sustainability) are dynamically `import()`ed — attendees never load the charting library at all. Every tab except Navigate — Order, Assistant, Transport, and every module built after them — is lazy-loaded, so opening a tab you never visit costs nothing. See [Performance](#performance) below.
 
 ## Tech stack
 
@@ -165,9 +166,10 @@ CI runs all of the above — lint, unit tests with coverage, build, and E2E — 
 
 ## Performance
 
-- **Code-split Operations tabs.** `OpsPulseTab`, `VendorLoadTab`, and `SustainabilityTab` (and Recharts itself) are loaded via `React.lazy()` instead of bundled into the main chunk. The attendee-facing bundle never touches the charting library; staff only fetch it once they open a tab that needs it.
-- **Shared modules split by kind, not just by reuse**: `src/shared/data.js` (pure data/logic) and `src/shared/ui.jsx` (presentational components) are separate files, both imported by the main shell and the lazy tabs — the split also keeps each file Fast-Refresh-clean (no mixed component/non-component exports).
+- **Every tab beyond the default Navigate view is code-split.** Not just the Recharts-heavy staff tabs — `OrderTab`, `AssistantTab`, and `TransportTab` (the three other original attendee tabs) are also lazy-loaded now, since only Navigate is guaranteed to be seen. This cut the main bundle from 241.6 KB to **227.8 KB** (75.5 KB → **72.4 KB gzip**), with those three tabs deferred into 4-5 KB on-demand chunks. Navigate itself stays eager so the very first screen after onboarding never shows a loading flash.
+- **Shared modules split by kind, not just by reuse**: `src/shared/data.js` (pure data/logic), `src/shared/ui.jsx` (presentational components), and `src/shared/avatars.jsx` (the mascot SVGs, needed by both the main shell and the now-lazy `AssistantTab`) are separate files — the split also keeps each file Fast-Refresh-clean (no mixed component/non-component exports).
 - **Memoized list rows.** `SnackRow` (Order), `ZoneRow` (Navigate), and `RouteRow` (Transport) are wrapped in `React.memo` with stable (`useCallback`) handlers, so incrementing one cart item or toggling step-free routing re-renders only the row that changed, not the whole list.
+- **No dead weight.** Vite/CRA-scaffolding leftovers (`App.css`, unused image assets, an unreferenced `icons.svg`) were removed after confirming via grep that nothing imported them.
 
 ## Accessibility
 
@@ -215,8 +217,9 @@ stadiumsync/
 ├── src/
 │   ├── StadiumSync.jsx       # main app: onboarding, attendee tabs, shell/routing
 │   ├── shared/
-│   │   ├── data.js           # pure data + densityColor, shared with the lazy tabs
-│   │   └── ui.jsx             # Card/Pill/SectionLabel/AIBadge — presentational only
+│   │   ├── data.js           # pure data + densityColor + AVATARS lookup, shared with the lazy tabs
+│   │   ├── ui.jsx             # Card/Pill/SectionLabel/AIBadge — presentational only
+│   │   └── avatars.jsx        # mascot SVG components (needed by StadiumSync.jsx and the lazy AssistantTab)
 │   ├── lib/
 │   │   ├── assistant.js      # attendee scripted reply bank + language detection
 │   │   ├── protocol.js       # Volunteer Copilot offline fallback bank
@@ -226,7 +229,10 @@ stadiumsync/
 │   │   ├── sensory.js        # Access+ loud-moment warning offline fallback
 │   │   ├── callAssistant.js  # shared client for POST /api/assistant
 │   │   └── haptics.js        # Vibration API wrapper (progressive enhancement)
-│   ├── tabs/                 # code-split tabs (lazy-loaded)
+│   ├── tabs/                 # code-split tabs (lazy-loaded) — everything but NavigateTab
+│   │   ├── OrderTab.jsx          # attendee — snack cart + checkout
+│   │   ├── AssistantTab.jsx      # attendee — multilingual AI chat
+│   │   ├── TransportTab.jsx      # attendee — route map, reacts to Egress Optimizer's delay flag
 │   │   ├── OpsPulseTab.jsx
 │   │   ├── VendorLoadTab.jsx
 │   │   ├── SustainabilityTab.jsx
