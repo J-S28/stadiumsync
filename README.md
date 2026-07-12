@@ -20,6 +20,12 @@ Every capability called for in *Smart Stadiums & Tournament Operations* is imple
 | Tournament operations dashboard | A real-time Ops Console: zone density, vendor wait/stock alerts, sustainability/waste diversion, all with actionable one-tap responses | `OpsPulseTab`, `VendorLoadTab`, `SustainabilityTab` in [`src/tabs/`](src/tabs/) |
 | Accessibility assistance | A real step-free routing toggle and Audio wayfinding that speaks directions aloud via the Speech Synthesis API — not just a settings checkbox | Accessibility card in `NavigateTab`, [`src/StadiumSync.jsx`](src/StadiumSync.jsx) |
 | Real-time attendee↔operations feedback loop | Attendee assistant questions feed the same congestion signal the Ops Console surfaces as an actionable alert — one data model, two views | `AssistantTab` ↔ `OpsPulseTab` |
+| Incident response & emergency coordination | An AI summarizer aggregates independent security/volunteer/social reports into one alert and a concrete deployment plan, plus one-tap AI-generated, multilingual PA/push comms | `IncidentCommandTab` in [`src/tabs/IncidentCommandTab.jsx`](src/tabs/IncidentCommandTab.jsx) |
+| Staff/volunteer operational enablement | An AI protocol assistant grounded in an operations-manual excerpt, plus AI-generated volunteer redirect briefs tied to live crowd-density data | `CopilotTab` in [`src/tabs/CopilotTab.jsx`](src/tabs/CopilotTab.jsx) |
+| Post-match egress & crowd control | Live-shared "transit delay" state that automatically fires an AI wayfinding + digital-signage update and genuinely re-routes the attendee Transport tab in the same session | `EgressTab` ↔ `TransportTab` in [`src/StadiumSync.jsx`](src/StadiumSync.jsx) |
+| Fan engagement / immersive experience | AI-generated match commentary (tactical or team-biased) that plays aloud the instant a moment is tapped | `MatchHubTab` in [`src/tabs/MatchHubTab.jsx`](src/tabs/MatchHubTab.jsx) |
+| Sensory & hearing accessibility | Quiet-room wait tracking, an AI-generated loud-moment warning, and real synced live captions | `AccessPlusTab` in [`src/tabs/AccessPlusTab.jsx`](src/tabs/AccessPlusTab.jsx) |
+| City-wide event integration (Fan Zones) | Nearby official Fan Zone wait times, live music schedules, and animated seat-to-entrance routing | `FanZoneTab` in [`src/tabs/FanZoneTab.jsx`](src/tabs/FanZoneTab.jsx) |
 
 ## The problem
 
@@ -142,14 +148,16 @@ The dev server serves the frontend only — the `/api/assistant` route needs the
 ```bash
 npm test              # unit + component tests (Vitest + React Testing Library)
 npm run test:watch    # same, in watch mode
-npm run test:coverage # with a coverage report + enforced thresholds (currently ~96% statements)
+npm run test:coverage # with a coverage report + enforced thresholds (currently ~98% statements)
 npm run test:e2e      # Playwright end-to-end + axe-core accessibility scans
 ```
 
-- **Unit tests** (`src/test/utils.test.js`, `src/test/lib.test.js`) cover the pure logic: language auto-detection, keyword-based scripted replies (attendee + protocol), zone density color thresholds, the ticket-ID format check, incident/comms response parsing, the offline fallback banks, the `callAssistant` client, and the haptics wrapper (including graceful no-op when the Vibration API is unsupported).
-- **Component tests** (`src/test/StadiumSync.test.jsx`, 88 tests total across both files) drive the app through React Testing Library: onboarding gates, the order → checkout → confirmation flow, transport route selection, the Ops Console's actionable AI suggestions, the accessibility toggles, and every one of the six new modules — Copilot, Incident Command, Egress, Match Hub, Access+, Fan Zone — covering both the offline-fallback path and the live-API-success path.
-- **API tests** (`api/assistant.test.js`, 18 tests) mock the Anthropic SDK to cover method/validation errors, the success path, auth/rate-limit/upstream-error handling, the in-memory rate limiter, and that each of the five `mode` values selects the correct system prompt — with no real network calls.
-- **E2E tests** (`e2e/*.spec.js`, 28 tests) run the built app in a real headless browser: the full attendee and operations journeys including all six new modules, plus five `@axe-core/playwright` scans (landing page, attendee Navigate tab, Ops Console, Match Hub, Incident Command) that currently report **zero WCAG 2.0/2.1 A/AA violations**, and a keyboard-only walkthrough of onboarding.
+108 Vitest tests + 29 Playwright E2E tests = 137 total, all passing:
+
+- **Unit tests** (`src/test/utils.test.js` — 20, `src/test/lib.test.js` — 21) cover the pure logic: language auto-detection, keyword-based scripted replies (attendee + protocol), zone density color thresholds, the ticket-ID format check, incident/comms/egress response parsing, the offline fallback banks, the `callAssistant` client (including its own empty-reply and non-ok-response branches), and the haptics wrapper (including graceful no-op when the Vibration API is unsupported).
+- **Component tests** (`src/test/StadiumSync.test.jsx` — 42) drive the app through React Testing Library: onboarding gates, the order → checkout → confirmation flow, transport route selection, the Ops Console's actionable AI suggestions, the accessibility toggles, and every one of the six new modules — Copilot, Incident Command, Egress, Match Hub, Access+, Fan Zone — covering the offline-fallback path, the live-API-success path, and edge interactions (Enter-key submission, replay/stop toggles, dismissing confirmations).
+- **API tests** (`api/assistant.test.js` — 25) mock the Anthropic SDK to cover method/validation errors, the success path, auth/rate-limit/upstream-error handling, the in-memory rate limiter, that each of the eight `mode` values selects the correct system prompt, and IP-resolution fallbacks (`x-forwarded-for` → `socket.remoteAddress` → `"unknown"`) — with no real network calls.
+- **E2E tests** (`e2e/*.spec.js` — 29) run the built app in a real headless browser: the full attendee and operations journeys including all six new modules, plus five `@axe-core/playwright` scans (landing page, attendee Navigate tab, Ops Console, Match Hub, Incident Command) that currently report **zero WCAG 2.0/2.1 A/AA violations**, and a keyboard-only walkthrough of onboarding.
 
 Coverage thresholds (`vite.config.js`) are enforced, not just reported — `test:coverage` fails the run if statements/lines drop below 90%, functions below 90%, or branches below 80%.
 

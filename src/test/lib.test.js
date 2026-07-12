@@ -144,6 +144,17 @@ describe('callAssistant', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('returns an empty string when the response has no reply field', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+    try {
+      const reply = await callAssistant({ messages: [{ role: 'user', text: 'hi' }] });
+      expect(reply).toBe('');
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('haptics', () => {

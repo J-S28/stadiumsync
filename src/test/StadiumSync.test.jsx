@@ -96,6 +96,19 @@ describe('Order tab', () => {
     expect(await screen.findByText(/order placed/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /send to seat/i })).not.toBeInTheDocument();
   });
+
+  it('dismisses the order confirmation on request', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /order/i }));
+
+    await user.click(screen.getAllByRole('button', { name: /add .* to order/i })[0]);
+    await user.click(await screen.findByRole('button', { name: /send to seat/i }));
+    await screen.findByText(/order placed/i);
+
+    await user.click(screen.getByRole('button', { name: /dismiss order confirmation/i }));
+    expect(screen.queryByText(/order placed/i)).not.toBeInTheDocument();
+  });
 });
 
 describe('Transport tab', () => {
@@ -154,12 +167,17 @@ describe('Accessibility toggles', () => {
     expect(within(toggle).getByText(/off — standard route/i)).toBeInTheDocument();
   });
 
-  it('speaks directions via the browser speech synthesis API', async () => {
+  it('speaks directions via the browser speech synthesis API, and stops on a second tap', async () => {
     const user = userEvent.setup();
     await enterAsAttendee(user);
     const audioButton = await screen.findByRole('button', { name: /audio wayfinding/i });
     await user.click(audioButton);
     expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1);
+    expect(audioButton).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(audioButton);
+    expect(window.speechSynthesis.cancel).toHaveBeenCalled();
+    expect(audioButton).toHaveAttribute('aria-pressed', 'false');
   });
 });
 
@@ -279,6 +297,18 @@ describe('Volunteer Copilot tab (Ops Console)', () => {
     expect(await screen.findByText(/Guest Services/i)).toBeInTheDocument();
   });
 
+  it('sends a protocol question by pressing Enter, not just clicking Send', async () => {
+    const user = userEvent.setup();
+    await enterAsOperations(user);
+    await screen.findByText('Ops Console');
+    await user.click(screen.getByRole('tab', { name: /copilot/i }));
+
+    const input = await screen.findByLabelText(/ask the protocol assistant/i);
+    await user.type(input, 'a spill near section 12{Enter}');
+
+    expect(await screen.findByText(/Custodial/i)).toBeInTheDocument();
+  });
+
   it('uses the real API reply when the network call succeeds', async () => {
     const originalFetch = global.fetch;
     global.fetch = vi.fn().mockResolvedValue({
@@ -371,6 +401,43 @@ describe('Incident Command tab (Ops Console)', () => {
     await user.click(screen.getByRole('button', { name: /generate announcement/i }));
     expect(await screen.findByText(/for a faster exit, please use concourse s/i)).toBeInTheDocument();
   });
+
+  it('uses the real AI summary when the network call succeeds', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ reply: 'Alert: Confirmed spill at Section 104.\nRecommended deployment: 1 custodial cart to Section 104.' }),
+    });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /incident command/i }));
+      await user.click(await screen.findByRole('button', { name: /summarize with ai/i }));
+      expect(await screen.findByText(/confirmed spill at section 104/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 custodial cart to section 104/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('uses the real AI comms when the network call succeeds', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ reply: 'PA: Please proceed to Concourse N for assistance.\nPUSH: Head to Concourse N.' }),
+    });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /incident command/i }));
+      await user.click(await screen.findByRole('button', { name: /generate announcement/i }));
+      expect(await screen.findByText(/please proceed to concourse n for assistance/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('Egress tab (Ops Console)', () => {
@@ -452,6 +519,11 @@ describe('Match Hub tab', () => {
     const stopButton = await screen.findByRole('button', { name: /stop commentary playback/i });
     await user.click(stopButton);
     expect(window.speechSynthesis.cancel).toHaveBeenCalled();
+
+    // Tapping again while stopped replays the same commentary.
+    const replayButton = await screen.findByRole('button', { name: /play commentary aloud/i });
+    await user.click(replayButton);
+    expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(2);
   });
 
   it('generates team-biased commentary for a chosen team and moment', async () => {

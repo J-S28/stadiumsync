@@ -80,6 +80,30 @@ describe('POST /api/assistant', () => {
     expect(createMock).toHaveBeenCalledTimes(1);
   });
 
+  it('returns an empty reply when the response has no text block', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'tool_use' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'hi' }] }, ip: '1.1.1.20' }), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.reply).toBe('');
+  });
+
+  it('rate-limits by socket.remoteAddress when x-forwarded-for is absent', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    const req = { method: 'POST', body: { messages: [{ role: 'user', text: 'hi' }] }, headers: {}, socket: { remoteAddress: '198.51.100.99' } };
+    await handler(req, res);
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('rate-limits by "unknown" when neither x-forwarded-for nor socket.remoteAddress is present', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    const req = { method: 'POST', body: { messages: [{ role: 'user', text: 'hi' }] }, headers: {} };
+    await handler(req, res);
+    expect(res.statusCode).toBe(200);
+  });
+
   it('maps bot/user roles onto assistant/user for the API call', async () => {
     createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
     const res = mockRes();
