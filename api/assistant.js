@@ -40,6 +40,8 @@ const EGRESS_CONTEXT = `You are the StadiumSync Egress Optimizer. Given the tran
 WAYFINDING: <guidance>
 SIGNAGE: <message>`;
 
+const SENSORY_CONTEXT = `You are the StadiumSync Accessibility assistant. Given the upcoming loud moment described in the latest message, write ONE short, reassuring warning (1-2 sentences) for a noise-sensitive attendee — name the specific upcoming loud moment, how soon it is, and the nearest quiet room to retreat to. Reply with just the warning itself, no extra commentary, no quotation marks.`;
+
 const LANG_NAMES = { en: "English", es: "Spanish", pt: "Portuguese", fr: "French", de: "German" };
 
 function commsPrompt(lang) {
@@ -56,7 +58,7 @@ function commentaryPrompt(style) {
   return `You are a calm, technical FIFA World Cup 2026 match analyst providing tactical commentary for a fan using StadiumSync. Given the play-by-play moment in the latest message, explain the tactical significance — formation, positioning, decision-making — in 2-3 sentences of clear, precise, spoken-word analysis, ready to read aloud.`;
 }
 
-const MODES = ["attendee", "protocol", "incident", "comms", "commentary", "brief", "egress"];
+const MODES = ["attendee", "protocol", "incident", "comms", "commentary", "brief", "egress", "sensory"];
 
 function systemPromptFor(mode, { lang, style }) {
   switch (mode) {
@@ -65,6 +67,7 @@ function systemPromptFor(mode, { lang, style }) {
     case "comms": return commsPrompt(lang);
     case "brief": return BRIEF_CONTEXT;
     case "egress": return EGRESS_CONTEXT;
+    case "sensory": return SENSORY_CONTEXT;
     case "commentary": return commentaryPrompt(style);
     default: return STADIUM_CONTEXT;
   }

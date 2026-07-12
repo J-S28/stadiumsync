@@ -439,16 +439,19 @@ describe('Egress tab (Ops Console)', () => {
 });
 
 describe('Match Hub tab', () => {
-  it('generates commentary with the offline fallback and plays it aloud', async () => {
+  it('generates commentary automatically when a moment is tapped and speaks it aloud', async () => {
     const user = userEvent.setup();
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /match hub/i }));
 
-    await user.click(await screen.findByRole('button', { name: /generate commentary/i }));
+    // Tapping the moment is the trigger — no separate generate/play steps.
+    await user.click(await screen.findByRole('button', { name: /corner kick won/i }));
     expect(await screen.findByText(/tactical shift/i)).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /play commentary aloud/i }));
     expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1);
+
+    const stopButton = await screen.findByRole('button', { name: /stop commentary playback/i });
+    await user.click(stopButton);
+    expect(window.speechSynthesis.cancel).toHaveBeenCalled();
   });
 
   it('generates team-biased commentary for a chosen team and moment', async () => {
@@ -461,9 +464,25 @@ describe('Match Hub tab', () => {
     await user.clear(teamInput);
     await user.type(teamInput, 'Mexico');
     await user.click(screen.getByRole('button', { name: /^goal!$/i }));
-    await user.click(screen.getByRole('button', { name: /generate commentary/i }));
 
     expect(await screen.findByText(/what a moment/i)).toBeInTheDocument();
+  });
+
+  it('uses the real AI commentary when the network call succeeds', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ reply: 'The keeper reads the angle perfectly and smothers it.' }),
+    });
+    try {
+      const user = userEvent.setup();
+      await enterAsAttendee(user);
+      await user.click(await screen.findByRole('tab', { name: /match hub/i }));
+      await user.click(await screen.findByRole('button', { name: /near miss on goal/i }));
+      expect(await screen.findByText(/the keeper reads the angle perfectly/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });
 
@@ -490,15 +509,32 @@ describe('Access+ tab', () => {
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByText(/pyrotechnics expected at halftime/i)).not.toBeInTheDocument();
   });
+
+  it('uses the real AI-generated warning when the network call succeeds', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ reply: 'Fireworks start in 12 minutes — head to the Concourse S quiet room if you need a break.' }),
+    });
+    try {
+      const user = userEvent.setup();
+      await enterAsAttendee(user);
+      await user.click(await screen.findByRole('tab', { name: /access\+/i }));
+      expect(await screen.findByText(/fireworks start in 12 minutes/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('Fan Zone tab', () => {
-  it('routes to the nearest Fan Zone on request', async () => {
+  it('routes to the nearest Fan Zone on request and shows a live route', async () => {
     const user = userEvent.setup();
     await enterAsAttendee(user);
     await user.click(await screen.findByRole('tab', { name: /fan zone/i }));
 
     await user.click(await screen.findByRole('button', { name: /route me there/i }));
     expect(await screen.findByText(/showing route to zócalo fan fest/i)).toBeInTheDocument();
+    expect(screen.getByText(/live route — updating as you walk/i)).toBeInTheDocument();
   });
 });

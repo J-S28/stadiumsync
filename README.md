@@ -55,9 +55,9 @@ A second round of additions goes deeper on both sides — same "one AI layer, tw
 
 | Module | What it does | Honesty note |
 |---|---|---|
-| **Match Hub** (`MatchHubTab`) | **AI commentary**: pick tactical or team-biased style, a team, and a moment, and Claude (mode `commentary`) generates 2-3 sentences of spoken-word commentary, playable aloud via Speech Synthesis. Plus **AR Match Stats**. | AR Match Stats is a clearly labeled **concept preview** — a real live camera overlay needs camera access and a broadcast feed this demo doesn't have, so it's shown as a static mockup of the intended layout, not faked as working. |
-| **Access+** (`AccessPlusTab`) | **Sensory management**: quiet-room wait times and a loud-moment warning (pyrotechnics/halftime alerts). **Live captions**: a real synced-caption panel of PA announcements. | The brief called for a sign-language avatar; there's no accessible generation model for that, so live captions — genuinely useful and genuinely working — ship instead, with an explicit in-UI note about the avatar being out of scope for this build. |
-| **Fan Zone Link** (`FanZoneTab`) | Nearby official Fan Zone wait times, live music schedules, and one-tap seat-to-Fan-Zone routing. | Demo data (no live Fan Zone API), same fidelity as the rest of the app's venue data. |
+| **Match Hub** (`MatchHubTab`) | **AI commentary feed**: pick tactical or team-biased style and a team, then tapping a match moment *is* the toggle — Claude (mode `commentary`) generates 2-3 sentences of commentary and it plays aloud immediately via Speech Synthesis, no separate generate/play steps. Plus **AR Match Stats**, mocked up with a player name, speed, possession, and a decorative heat-map overlay. | AR Match Stats is a clearly labeled **concept preview** — a real live camera overlay needs camera access and a broadcast feed this demo doesn't have, so it's shown as a static mockup of the intended layout (player names, speeds, heat map), not faked as working. |
+| **Access+** (`AccessPlusTab`) | **Sensory management**: quiet-room wait times, and a loud-moment warning that's a real Claude call (mode `sensory`) fired automatically when warnings are enabled — not static copy. **Live captions**: a real synced-caption panel of PA announcements. | The brief called for a sign-language avatar; there's no accessible generation model for that, so live captions — genuinely useful and genuinely working — ship instead, with an explicit in-UI note about the avatar being out of scope for this build. |
+| **Fan Zone Link** (`FanZoneTab`) | Nearby official Fan Zone wait times, live music schedules, and one-tap seat-to-Fan-Zone routing with a real animated route visualization (same visual language as the Transport tab), not just a text confirmation. | Demo data (no live Fan Zone API), same fidelity as the rest of the app's venue data. |
 
 **Design system additions** — applied to the new modules and to every existing "AI-suggested action" (Deploy Marshals, Dispatch Cart, the Order tab's AI pick, the Transport AI suggestion), *not* as a full app-wide re-theme (the existing dark palette stays as-is everywhere else — a full light/dark split was judged too high-risk to retrofit across a tested, working UI this close to submission):
 
@@ -82,13 +82,14 @@ These are stand-ins for real ticket verification and staff authentication — en
 
 ## How GenAI is used
 
-Every Claude call in the app goes through one Vercel serverless function (`api/assistant.js`), backed by **Claude (`claude-opus-4-8`)** via the Anthropic API — never called directly from the browser, so the API key is never exposed to the client. A validated `mode` enum selects one of seven fixed system prompts server-side (`attendee`, `protocol`, `incident`, `comms`, `commentary`, `brief`, `egress`) — the client picks a mode, never the prompt text itself, so there's no path for user input to inject into what Claude is told to do:
+Every Claude call in the app goes through one Vercel serverless function (`api/assistant.js`), backed by **Claude (`claude-opus-4-8`)** via the Anthropic API — never called directly from the browser, so the API key is never exposed to the client. A validated `mode` enum selects one of eight fixed system prompts server-side (`attendee`, `protocol`, `incident`, `comms`, `commentary`, `brief`, `egress`, `sensory`) — the client picks a mode, never the prompt text itself, so there's no path for user input to inject into what Claude is told to do:
 
 - **`attendee`** (`AssistantTab`) — grounds every answer in the stadium's actual live state (zone density, gate congestion, vendor wait times, transit ETAs) and always replies in whatever language the attendee just typed in, not just the five UI pills (EN/ES/PT/FR/DE).
 - **`protocol`** (`CopilotTab`, staff) — answers volunteer questions from a demo operations-manual excerpt (lost child, rejected ticket, medical, spill, weather), escalating to a supervisor rather than guessing outside that excerpt.
 - **`incident`** (`IncidentCommandTab`, staff) — aggregates independent mock reports into one alert and a concrete deployment recommendation.
 - **`comms`** (`IncidentCommandTab`, staff) — generates a PA announcement and push notification in a chosen language from a short incident description.
-- **`commentary`** (`MatchHubTab`, attendee) — generates tactical or team-biased match commentary, playable aloud via Speech Synthesis.
+- **`commentary`** (`MatchHubTab`, attendee) — generates tactical or team-biased match commentary, played aloud automatically the moment a match moment is tapped.
+- **`sensory`** (`AccessPlusTab`, attendee) — generates a personalized loud-moment warning naming the upcoming moment, how soon it is, and the nearest quiet room, fired automatically when warnings are on.
 - **`brief`** (`CopilotTab`, staff) — generates a short, radio-style redirect brief for volunteers, given the zone Ops Pulse's live density data currently flags as most congested.
 - **`egress`** (`EgressTab`, staff) — fires automatically (no manual "generate" step) when a transit delay is toggled, writing updated attendee wayfinding guidance and a digital-signage message; the resulting state is shared app-level, so it also updates the attendee Transport tab live.
 
@@ -214,6 +215,7 @@ stadiumsync/
 │   │   ├── incident.js       # incident/comms response parsing + mock reports + fallbacks
 │   │   ├── commentary.js     # Match Hub offline fallback commentary
 │   │   ├── egress.js         # egress wayfinding/signage response parsing + fallback
+│   │   ├── sensory.js        # Access+ loud-moment warning offline fallback
 │   │   ├── callAssistant.js  # shared client for POST /api/assistant
 │   │   └── haptics.js        # Vibration API wrapper (progressive enhancement)
 │   ├── tabs/                 # code-split tabs (lazy-loaded)

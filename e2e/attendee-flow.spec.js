@@ -81,10 +81,10 @@ test.describe('Attendee flow', () => {
     await expect(page.getByRole('tab', { name: /operations/i })).toBeVisible();
   });
 
-  test('generates AI match commentary in the Match Hub tab', async ({ page }) => {
+  test('generates AI match commentary automatically when a moment is tapped in the Match Hub tab', async ({ page }) => {
     await enterAsAttendee(page);
     await page.getByRole('tab', { name: /match hub/i }).click();
-    await page.getByRole('button', { name: /generate commentary/i }).click();
+    await page.getByRole('button', { name: /corner kick won/i }).click();
     await expect(page.getByText(/tactical shift/i)).toBeVisible();
     await expect(page.getByText(/a live ar overlay needs camera/i)).toBeVisible();
   });

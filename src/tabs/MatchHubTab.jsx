@@ -9,27 +9,14 @@ const MOMENTS = ["Corner kick won", "Near miss on goal", "Great tackle to break 
 export default function MatchHubTab() {
   const [style, setStyle] = useState("tactical");
   const [team, setTeam] = useState("the host nation");
-  const [moment, setMoment] = useState(MOMENTS[0]);
+  const [moment, setMoment] = useState(null);
   const [commentary, setCommentary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
 
-  const generate = async () => {
-    setLoading(true);
-    setCommentary(null);
-    try {
-      const reply = await callAssistant({ mode: "commentary", style, messages: [{ role: "user", text: `${team} — ${moment}` }] });
-      setCommentary(reply || COMMENTARY_FALLBACK[style]);
-    } catch {
-      setCommentary(COMMENTARY_FALLBACK[style]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const playAloud = () => {
-    if (!commentary || typeof window === "undefined" || !window.speechSynthesis) return;
-    const utterance = new SpeechSynthesisUtterance(commentary);
+  const speak = (text) => {
+    if (!text || typeof window === "undefined" || !window.speechSynthesis) return;
+    const utterance = new SpeechSynthesisUtterance(text);
     utterance.onend = () => setSpeaking(false);
     utterance.onerror = () => setSpeaking(false);
     window.speechSynthesis.cancel();
@@ -37,11 +24,40 @@ export default function MatchHubTab() {
     setSpeaking(true);
   };
 
+  // Tapping a moment IS the toggle — commentary generates and plays
+  // immediately, the way a live commentary feed would react to play as it
+  // happens, rather than a separate generate-then-play form.
+  const selectMoment = async (m) => {
+    setMoment(m);
+    setLoading(true);
+    setCommentary(null);
+    let text;
+    try {
+      const reply = await callAssistant({ mode: "commentary", style, messages: [{ role: "user", text: `${team} — ${m}` }] });
+      text = reply || COMMENTARY_FALLBACK[style];
+    } catch {
+      text = COMMENTARY_FALLBACK[style];
+    } finally {
+      setLoading(false);
+    }
+    setCommentary(text);
+    speak(text);
+  };
+
+  const toggleSpeak = () => {
+    if (speaking) {
+      window.speechSynthesis?.cancel();
+      setSpeaking(false);
+      return;
+    }
+    speak(commentary);
+  };
+
   return (
     <div className="space-y-4">
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
-          <SectionLabel>AI commentary</SectionLabel>
+          <SectionLabel>AI commentary feed</SectionLabel>
           <AIBadge label="AI commentary" />
         </div>
         <div className="grid grid-cols-2 gap-2 mb-3 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5" role="tablist" aria-label="Commentary style">
@@ -64,38 +80,38 @@ export default function MatchHubTab() {
           onChange={(e) => setTeam(e.target.value)}
           placeholder="e.g. Mexico"
           maxLength={40}
-          className="w-full bg-[#16281F] border border-[#223328] rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none focus:border-[#3ED07A] mb-2 focus-visible:ring-2 focus-visible:ring-[#3ED07A]"
+          className="w-full bg-[#16281F] border border-[#223328] rounded-full px-4 py-2.5 text-sm text-[#F3F3EF] placeholder-[#5A6B62] outline-none focus:border-[#3ED07A] mb-3 focus-visible:ring-2 focus-visible:ring-[#3ED07A]"
         />
+        <p className="text-[10px] text-[#8FA69B] mb-2 -mt-1.5">Tap a moment to hear commentary immediately, like a live feed reacting to the match.</p>
         <div className="flex flex-wrap gap-1.5 mb-3">
           {MOMENTS.map((m) => (
             <button
               key={m}
-              onClick={() => setMoment(m)}
+              onClick={() => selectMoment(m)}
+              disabled={loading}
               aria-pressed={moment === m}
-              className={`px-2.5 py-1 rounded-full text-xs border transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${moment === m ? "bg-[#3ED07A]/15 text-[#3ED07A] border-[#3ED07A]/40" : "bg-transparent text-[#8FA69B] border-[#223328]"}`}
+              className={`px-2.5 py-1 rounded-full text-xs border transition disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${moment === m ? "bg-[#3ED07A]/15 text-[#3ED07A] border-[#3ED07A]/40" : "bg-transparent text-[#8FA69B] border-[#223328]"}`}
             >
               {m}
             </button>
           ))}
         </div>
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-[#B5122E] via-[#046A38] to-[#0033A0] text-white rounded-2xl py-3 font-semibold flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.99] transition disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-white focus-visible:outline-none"
-        >
-          {loading ? "Generating…" : "Generate commentary"}
-        </button>
-        {commentary && (
-          <div className="mt-3 bg-[#16281F] rounded-xl p-3.5 flex items-start gap-2.5" role="status">
+        {loading && (
+          <div className="flex items-center gap-2 text-sm text-[#8FA69B]" role="status">
+            <Clapperboard size={14} className="shrink-0" aria-hidden="true" /> Generating commentary…
+          </div>
+        )}
+        {commentary && !loading && (
+          <div className="bg-[#16281F] rounded-xl p-3.5 flex items-start gap-2.5" role="status">
             <Clapperboard size={15} className="text-[#3ED07A] mt-0.5 shrink-0" aria-hidden="true" />
             <div className="flex-1 text-sm text-[#F3F3EF] leading-relaxed">{commentary}</div>
             <button
-              onClick={playAloud}
-              aria-label="Play commentary aloud"
+              onClick={toggleSpeak}
+              aria-label={speaking ? "Stop commentary playback" : "Play commentary aloud"}
               aria-pressed={speaking}
               className="shrink-0 w-8 h-8 rounded-full bg-[#223328] flex items-center justify-center text-[#8FA69B] hover:text-[#F3F3EF] focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"
             >
-              <Volume2 size={14} aria-hidden="true" />
+              <Volume2 size={14} className={speaking ? "text-[#3ED07A] animate-pulse" : ""} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -107,12 +123,18 @@ export default function MatchHubTab() {
           <Pill tone="alert">Concept preview</Pill>
         </div>
         <div className="relative rounded-xl overflow-hidden bg-[#0B140F] h-40 flex items-center justify-center border border-[#223328]">
-          <ScanEye size={28} className="text-[#3ED07A]/40" aria-hidden="true" />
-          <div className="absolute top-3 left-3 text-[10px] text-[#3ED07A] bg-[#0B140F]/80 px-2 py-1 rounded">Speed: 8.2 km/h</div>
+          {/* Decorative heat-map blobs standing in for a real positional heat map */}
+          <div className="absolute inset-0" aria-hidden="true">
+            <div className="absolute w-24 h-24 rounded-full bg-[#FF6B5B]/25 blur-2xl" style={{ left: "30%", top: "35%" }} />
+            <div className="absolute w-20 h-20 rounded-full bg-[#FFC24B]/25 blur-2xl" style={{ left: "58%", top: "50%" }} />
+            <div className="absolute w-16 h-16 rounded-full bg-[#3ED07A]/20 blur-2xl" style={{ left: "45%", top: "20%" }} />
+          </div>
+          <ScanEye size={28} className="text-[#3ED07A]/40 relative" aria-hidden="true" />
+          <div className="absolute top-3 left-3 text-[10px] text-[#F3F3EF] bg-[#0B140F]/80 px-2 py-1 rounded">Vinícius Jr. — 8.2 km/h</div>
           <div className="absolute bottom-3 right-3 text-[10px] text-[#FFC24B] bg-[#0B140F]/80 px-2 py-1 rounded">Possession: 61%</div>
         </div>
         <p className="text-[11px] text-[#8FA69B] mt-2.5 leading-relaxed">
-          Concept preview — a live AR overlay needs camera access and a real-time broadcast feed, which isn't available in this demo build. Shown here is the intended layout.
+          Concept preview — a live AR overlay needs camera access and a real-time broadcast feed, which isn't available in this demo build. Shown here is the intended layout: player names, running speeds, and a positional heat map.
         </p>
       </Card>
     </div>

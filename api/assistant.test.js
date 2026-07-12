@@ -176,6 +176,13 @@ describe('POST /api/assistant', () => {
     expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('Egress Optimizer') }));
   });
 
+  it('uses the accessibility system prompt for mode "sensory"', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'pyrotechnics at halftime' }], mode: 'sensory' }, ip: '1.1.2.10' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('Accessibility assistant') }));
+  });
+
   it('uses the biased commentary system prompt for mode "commentary" with style "biased"', async () => {
     createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
     const res = mockRes();
