@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY from env
 
@@ -16,13 +17,38 @@ Answer only using the information above — don't invent gate numbers, prices, o
 
 Keep replies to 1-3 sentences, conversational, and immediately useful — this is a mobile chat bubble, not a report. Always reply in the same language the user just wrote in, whatever that language is — don't default to English and don't ask which language to use.`;
 
+// Bounds chosen to comfortably cover a real chat session while capping
+// worst-case token spend from a single malicious or malformed request.
+const MessageSchema = z.object({
+  role: z.enum(["bot", "user"]),
+  text: z.string().trim().min(1).max(2000),
+});
+
+const RequestSchema = z.object({
+  messages: z.array(MessageSchema).min(1).max(50),
+});
+
 function toApiMessages(messages) {
-  return messages
-    .filter((m) => m && typeof m.text === "string" && m.text.trim())
-    .map((m) => ({
-      role: m.role === "bot" ? "assistant" : "user",
-      content: m.text,
-    }));
+  return messages.map((m) => ({
+    role: m.role === "bot" ? "assistant" : "user",
+    content: m.text,
+  }));
+}
+
+// Best-effort in-memory rate limit. Serverless functions can run as multiple
+// isolated instances, so this doesn't enforce a hard global cap — but it
+// stops a single hot instance from being hammered, which is the realistic
+// abuse case for a demo deployment with no auth in front of this route.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
+const requestLog = new Map();
+
+function isRateLimited(key) {
+  const now = Date.now();
+  const timestamps = (requestLog.get(key) || []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  timestamps.push(now);
+  requestLog.set(key, timestamps);
+  return timestamps.length > RATE_LIMIT_MAX_REQUESTS;
 }
 
 export default async function handler(req, res) {
@@ -31,12 +57,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "method_not_allowed" });
   }
 
-  const { messages } = req.body || {};
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return res.status(400).json({ error: "messages_required" });
+  const clientKey = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
+  if (isRateLimited(clientKey)) {
+    res.setHeader("Retry-After", "60");
+    return res.status(429).json({ error: "rate_limited" });
   }
 
-  const apiMessages = toApiMessages(messages).slice(-20); // cap history sent per request
+  const parsed = RequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "invalid_request", issues: parsed.error.issues.map((i) => i.message) });
+  }
+
+  const apiMessages = toApiMessages(parsed.data.messages).slice(-20); // cap history sent per request
 
   try {
     const response = await anthropic.messages.create({

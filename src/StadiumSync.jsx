@@ -1,14 +1,19 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, lazy, Suspense } from "react";
 import {
   MapPin, Utensils, MessageCircle, Bus, Activity, Users, AlertTriangle,
-  Leaf, Send, Navigation, Clock, TrendingUp, TrendingDown, Package,
-  Volume2, Accessibility, ShieldCheck, ChevronRight, Plus, Minus,
+  Send, Navigation, Clock, Package, Leaf,
+  Volume2, Accessibility, ShieldCheck, Plus, Minus,
   Radio, Zap, Sparkles, ArrowRight, Lock, LogOut, CheckCircle2, X
 } from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
-  LineChart, Line, PieChart, Pie, Cell
-} from "recharts";
+import { Card, SectionLabel, Pill, densityColor, ZONES } from "./shared.jsx";
+
+// Recharts (~130KB gzipped) is only needed by the staff Ops/Vendors/
+// Sustainability tabs — lazy-loading them keeps that weight out of the
+// attendee bundle entirely and out of the initial staff bundle until the
+// relevant tab is actually opened.
+const OpsPulseTab = lazy(() => import("./tabs/OpsPulseTab.jsx"));
+const VendorLoadTab = lazy(() => import("./tabs/VendorLoadTab.jsx"));
+const SustainabilityTab = lazy(() => import("./tabs/SustainabilityTab.jsx"));
 
 /* ---------------------------------- THEME ----------------------------------
 Palette:
@@ -22,26 +27,10 @@ Palette:
   --mute:     #8FA69B   (secondary text)
 --------------------------------------------------------------------------- */
 
-const STAFF_PIN = "2026"; // demo-only gate for the staff console (see README)
+export const STAFF_PIN = "2026"; // demo-only gate for the staff console (see README)
 // Real ticket IDs are unique per fan, so there's no single "correct" value to
 // check against — validate the shape instead (letters/digits/dashes, 6+ chars).
-const TICKET_FORMAT = /^[A-Za-z0-9-]{6,}$/;
-
-const ZONES = [
-  { name: "Gate 3", density: 91, cap: 100 },
-  { name: "Gate 4", density: 97, cap: 100 },
-  { name: "Concourse N", density: 62, cap: 100 },
-  { name: "Concourse S", density: 48, cap: 100 },
-  { name: "Fan Zone", density: 74, cap: 100 },
-  { name: "Metro Exit", density: 55, cap: 100 },
-];
-
-const VENDOR_LOAD = [
-  { name: "Grill 12", wait: 14, stock: 82 },
-  { name: "Taco Stand", wait: 6, stock: 91 },
-  { name: "Cerveza Bar", wait: 22, stock: 34 },
-  { name: "Ice Cream Co.", wait: 3, stock: 12 },
-];
+export const TICKET_FORMAT = /^[A-Za-z0-9-]{6,}$/;
 
 const TRANSPORT_ROUTES = [
   {
@@ -57,13 +46,6 @@ const TRANSPORT_ROUTES = [
     path: "M 160 108 Q 220 70 265 42", dest: { x: 265, y: 42 }, label: { x: 265, y: 32, text: "Rideshare B2" },
   },
 ];
-
-const SUSTAIN_PIE = [
-  { name: "Recycled", value: 62 },
-  { name: "Landfill", value: 28 },
-  { name: "Compost", value: 10 },
-];
-const PIE_COLORS = ["#3ED07A", "#5A6B62", "#FFC24B"];
 
 const SNACKS = [
   { id: 1, name: "Loaded Nachos", price: 9.5, vendor: "Grill 12", eta: "14 min" },
@@ -131,7 +113,7 @@ const LANG_DETECT_MARKERS = {
 // Best-effort language guess from free text — used to auto-switch the
 // assistant's fallback script bank when the fan types instead of tapping a
 // language pill. Returns null when no language scores a confident match.
-function detectLang(text) {
+export function detectLang(text) {
   const t = ` ${text.toLowerCase()} `;
   let best = null;
   let bestScore = 0;
@@ -145,7 +127,7 @@ function detectLang(text) {
   return best;
 }
 
-function pickReply(lang, text) {
+export function pickReply(lang, text) {
   const t = text.toLowerCase();
   const bank = ASSISTANT_SCRIPT[lang].replies;
   if (t.includes("bath") || t.includes("restroom") || t.includes("baño") || t.includes("banheiro") || t.includes("toilette")) return bank.restroom;
@@ -154,11 +136,7 @@ function pickReply(lang, text) {
   return bank.default;
 }
 
-function densityColor(d) {
-  if (d >= 90) return "#FF6B5B";
-  if (d >= 70) return "#FFC24B";
-  return "#3ED07A";
-}
+export { densityColor };
 
 /* -------------------------------- MASCOTS ----------------------------------
 Flat vector character avatars. Used at onboarding, in the header, and inside
@@ -238,38 +216,6 @@ const AVATARS = {
   boy: { Comp: BoyAvatar, label: "Boy", accent: "#3ED07A" },
   girl: { Comp: GirlAvatar, label: "Girl", accent: "#FFC24B" },
 };
-
-/* ------------------------------- UI PRIMITIVES ------------------------------ */
-
-function Pill({ children, tone = "default" }) {
-  const tones = {
-    default: "bg-[#16281F] text-[#8FA69B] border-[#223328]",
-    live: "bg-[#3ED07A]/10 text-[#3ED07A] border-[#3ED07A]/30",
-    alert: "bg-[#FFC24B]/10 text-[#FFC24B] border-[#FFC24B]/30",
-    danger: "bg-[#FF6B5B]/10 text-[#FF6B5B] border-[#FF6B5B]/30",
-  };
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium tracking-wide ${tones[tone]}`}>
-      {children}
-    </span>
-  );
-}
-
-function Card({ children, className = "" }) {
-  return (
-    <div className={`bg-[#10201A] border border-[#223328] rounded-2xl transition-all duration-200 hover:border-[#2E4A3B] ${className}`}>
-      {children}
-    </div>
-  );
-}
-
-function SectionLabel({ children }) {
-  return (
-    <div className="text-[11px] font-semibold tracking-[0.14em] uppercase text-[#8FA69B] mb-3">
-      {children}
-    </div>
-  );
-}
 
 /* ------------------------------ ONBOARDING ---------------------------------- */
 
@@ -376,7 +322,7 @@ function Onboarding({ onDone }) {
               {ticketError ? (
                 <p id="ticket-hint" role="alert" className="text-[#FF6B5B] text-xs mb-3">That doesn't look like a ticket ID — at least 6 letters/digits, found on your confirmation email.</p>
               ) : (
-                <p id="ticket-hint" className="text-[#5A6B62] text-xs mb-3">Found on your match ticket confirmation, e.g. WC26-118014.</p>
+                <p id="ticket-hint" className="text-[#8FA69B] text-xs mb-3">Found on your match ticket confirmation, e.g. WC26-118014.</p>
               )}
 
               <button
@@ -412,7 +358,7 @@ function Onboarding({ onDone }) {
               {pinError ? (
                 <p id="pin-hint" role="alert" className="text-[#FF6B5B] text-xs mb-3">Incorrect passcode — try again.</p>
               ) : (
-                <p id="pin-hint" className="text-[#5A6B62] text-xs mb-3">Provided by your venue supervisor. <span className="text-[#8FA69B]">(Demo passcode: {STAFF_PIN})</span></p>
+                <p id="pin-hint" className="text-[#8FA69B] text-xs mb-3">Provided by your venue supervisor. <span className="text-[#8FA69B]">(Demo passcode: {STAFF_PIN})</span></p>
               )}
 
               <button
@@ -425,7 +371,7 @@ function Onboarding({ onDone }) {
           )}
         </Card>
 
-        <div className="mt-5 flex items-center justify-center gap-1.5 text-[10px] text-[#5A6B62]">
+        <div className="mt-5 flex items-center justify-center gap-1.5 text-[10px] text-[#8FA69B]">
           <Users size={11} /> Attendee actions feed the Ops layer in real time — same AI, every role.
         </div>
       </div>
@@ -565,7 +511,7 @@ function NavigateTab({ profile }) {
   );
 }
 
-function OrderTab({ profile }) {
+function OrderTab() {
   const [cart, setCart] = useState({});
   const [placedOrder, setPlacedOrder] = useState(null);
   const add = (id) => setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 }));
@@ -709,7 +655,7 @@ function AssistantTab({ profile }) {
         ))}
         <Pill tone="live"><Radio size={10} /> Multilingual AI</Pill>
       </div>
-      <p className="text-[10px] text-[#5A6B62] mb-3 -mt-1.5">Auto-detects the language you type in — tap a pill to switch manually.</p>
+      <p className="text-[10px] text-[#8FA69B] mb-3 -mt-1.5">Auto-detects the language you type in — tap a pill to switch manually.</p>
 
       <Card className="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
         {messages.map((m, i) => (
@@ -844,151 +790,6 @@ function TransportTab() {
   );
 }
 
-/* -------------------------------- STAFF VIEW -------------------------------- */
-
-function OpsPulseTab() {
-  const [dispatched, setDispatched] = useState(false);
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "Attendees in venue", value: "68,204", delta: "+3.2%", up: true },
-          { label: "Open incidents", value: "3", delta: "-2", up: false },
-          { label: "Avg. wait (food)", value: "11m", delta: "+4m", up: true },
-        ].map((k) => (
-          <Card key={k.label} className="p-4">
-            <div className="text-[11px] text-[#8FA69B] mb-1.5">{k.label}</div>
-            <div className="text-xl font-semibold text-[#F3F3EF]">{k.value}</div>
-            <div className={`flex items-center gap-1 text-[11px] mt-1 ${k.up ? "text-[#FFC24B]" : "text-[#3ED07A]"}`}>
-              {k.up ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {k.delta}
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="p-5">
-        <SectionLabel>Zone density — live</SectionLabel>
-        <div style={{ width: "100%", height: 200 }}>
-          <ResponsiveContainer>
-            <BarChart data={ZONES} margin={{ left: -20 }}>
-              <CartesianGrid stroke="#223328" vertical={false} />
-              <XAxis dataKey="name" tick={{ fill: "#8FA69B", fontSize: 10 }} axisLine={{ stroke: "#223328" }} tickLine={false} />
-              <YAxis tick={{ fill: "#8FA69B", fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: "#16281F", border: "1px solid #223328", borderRadius: 10, fontSize: 12 }} />
-              <Bar dataKey="density" radius={[6, 6, 0, 0]}>
-                {ZONES.map((z, i) => <Cell key={i} fill={densityColor(z.density)} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        <SectionLabel>AI-flagged signal</SectionLabel>
-        <div className="flex items-start gap-2.5 bg-[#FF6B5B]/10 border border-[#FF6B5B]/25 rounded-xl p-3.5">
-          <AlertTriangle size={16} className="text-[#FF6B5B] mt-0.5 shrink-0" aria-hidden="true" />
-          <div className="text-sm text-[#F3F3EF] flex-1">
-            <span className="font-medium">47 attendees</span> asked the assistant about "nearest exit" near Gate 4 in the last 6 minutes — a 5x spike. Recommend deploying 2 crowd marshals to Gate 4.
-            {dispatched ? (
-              <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold">
-                <CheckCircle2 size={13} aria-hidden="true" /> 2 marshals dispatched to Gate 4
-              </div>
-            ) : (
-              <button
-                onClick={() => setDispatched(true)}
-                className="mt-2.5 px-3.5 py-1.5 rounded-full bg-[#FF6B5B] text-[#0B140F] text-xs font-semibold hover:brightness-105 active:scale-95 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#FF6B5B] focus-visible:outline-none"
-              >
-                Deploy marshals
-              </button>
-            )}
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function VendorLoadTab() {
-  return (
-    <div className="space-y-4">
-      <Card className="p-5">
-        <SectionLabel>Vendor wait times</SectionLabel>
-        <div style={{ width: "100%", height: 180 }}>
-          <ResponsiveContainer>
-            <BarChart data={VENDOR_LOAD} layout="vertical" margin={{ left: 10 }}>
-              <CartesianGrid stroke="#223328" horizontal={false} />
-              <XAxis type="number" tick={{ fill: "#8FA69B", fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis dataKey="name" type="category" tick={{ fill: "#F3F3EF", fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
-              <Tooltip contentStyle={{ background: "#16281F", border: "1px solid #223328", borderRadius: 10, fontSize: 12 }} />
-              <Bar dataKey="wait" radius={[0, 6, 6, 0]} fill="#FFC24B" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-      <Card className="p-5">
-        <SectionLabel>Stock alerts</SectionLabel>
-        <div className="space-y-2.5">
-          {VENDOR_LOAD.map((v) => (
-            <div key={v.name} className="flex items-center justify-between bg-[#16281F] rounded-xl p-3">
-              <span className="text-sm text-[#F3F3EF]">{v.name}</span>
-              <Pill tone={v.stock < 20 ? "danger" : v.stock < 50 ? "alert" : "live"}>{v.stock}% stock</Pill>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function SustainabilityTab() {
-  const [dispatched, setDispatched] = useState(false);
-  return (
-    <div className="space-y-4">
-      <Card className="p-5">
-        <SectionLabel>Waste diversion — today</SectionLabel>
-        <div className="flex items-center gap-6">
-          <div style={{ width: 140, height: 140 }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie data={SUSTAIN_PIE} dataKey="value" innerRadius={40} outerRadius={62} paddingAngle={3}>
-                  {SUSTAIN_PIE.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="space-y-2">
-            {SUSTAIN_PIE.map((s, i) => (
-              <div key={s.name} className="flex items-center gap-2 text-sm">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE_COLORS[i] }} aria-hidden="true" />
-                <span className="text-[#F3F3EF]">{s.name}</span>
-                <span className="text-[#8FA69B]">{s.value}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
-      <Card className="p-5 flex items-start gap-2.5">
-        <Leaf size={17} className="text-[#3ED07A] mt-0.5 shrink-0" aria-hidden="true" />
-        <div className="text-sm text-[#F3F3EF] leading-relaxed flex-1">
-          Compost bin near Fan Zone is 89% full — AI suggests routing next collection cart there first to keep diversion rate on target.
-          {dispatched ? (
-            <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold">
-              <CheckCircle2 size={13} aria-hidden="true" /> Collection cart routed to Fan Zone
-            </div>
-          ) : (
-            <button
-              onClick={() => setDispatched(true)}
-              className="mt-2.5 px-3.5 py-1.5 rounded-full bg-[#3ED07A] text-[#0B140F] text-xs font-semibold hover:brightness-105 active:scale-95 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#3ED07A] focus-visible:outline-none"
-            >
-              Dispatch cart
-            </button>
-          )}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 /* ---------------------------------- SHELL ----------------------------------- */
 
 const FAN_TABS = [
@@ -1086,9 +887,11 @@ export default function StadiumSync() {
         </div>
 
         {/* Active panel */}
-        <ActiveComponent profile={profile} />
+        <Suspense fallback={<div className="text-center text-[#8FA69B] text-sm py-10" role="status">Loading…</div>}>
+          <ActiveComponent profile={profile} />
+        </Suspense>
 
-        <div className="mt-6 flex items-center justify-center gap-1.5 text-[10px] text-[#5A6B62]">
+        <div className="mt-6 flex items-center justify-center gap-1.5 text-[10px] text-[#8FA69B]">
           <Users size={11} /> Attendee actions feed the Ops layer in real time — same AI, every role.
         </div>
       </div>
