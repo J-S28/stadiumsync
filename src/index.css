@@ -14,6 +14,33 @@ body {
   background: #0B140F;
 }
 
+/* The onboarding avatar "becomes" the live position marker on the Navigate
+   tab's map — a miniature of the same avatar rides the route path, popping
+   in at marker scale instead of fading. Reduced-motion users get the
+   near-zero duration override below, same as every other animation. */
+@keyframes marker-morph-in {
+  0% { transform: scale(3.2); opacity: 0; }
+  60% { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.marker-morph {
+  transform-origin: center;
+  animation: marker-morph-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* A slow, subtle glow pulse for "live" data visualizations (zone density
+   bars, the waste-diversion donut, vendor wait charts) — conveys that the
+   dashboard is alive without fabricating fake fluctuating numbers, which
+   would contradict the specific figures referenced elsewhere in the app
+   (the assistant's answers, the README, other tabs). */
+@keyframes chart-breathe {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 0 rgba(62, 208, 122, 0)); }
+  50% { filter: brightness(1.06) drop-shadow(0 0 6px rgba(62, 208, 122, 0.25)); }
+}
+.chart-breathe {
+  animation: chart-breathe 3.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

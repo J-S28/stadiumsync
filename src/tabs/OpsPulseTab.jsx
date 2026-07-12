@@ -3,11 +3,16 @@ import { AlertTriangle, TrendingUp, TrendingDown, CheckCircle2 } from "lucide-re
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell,
 } from "recharts";
-import { Card, SectionLabel } from "../shared/ui.jsx";
+import { Card, SectionLabel, AIBadge } from "../shared/ui.jsx";
 import { densityColor, ZONES } from "../shared/data.js";
+import { hapticDispatch } from "../lib/haptics.js";
 
 export default function OpsPulseTab() {
   const [dispatched, setDispatched] = useState(false);
+  const dispatch = () => {
+    hapticDispatch();
+    setDispatched(true);
+  };
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
@@ -28,7 +33,7 @@ export default function OpsPulseTab() {
 
       <Card className="p-5">
         <SectionLabel>Zone density — live</SectionLabel>
-        <div style={{ width: "100%", height: 200 }}>
+        <div className="chart-breathe" style={{ width: "100%", height: 200 }}>
           <ResponsiveContainer>
             <BarChart data={ZONES} margin={{ left: -20 }}>
               <CartesianGrid stroke="#223328" vertical={false} />
@@ -44,7 +49,10 @@ export default function OpsPulseTab() {
       </Card>
 
       <Card className="p-5">
-        <SectionLabel>AI-flagged signal</SectionLabel>
+        <div className="flex items-center justify-between mb-3">
+          <SectionLabel>AI-flagged signal</SectionLabel>
+          <AIBadge />
+        </div>
         <div className="flex items-start gap-2.5 bg-[#FF6B5B]/10 border border-[#FF6B5B]/25 rounded-xl p-3.5">
           <AlertTriangle size={16} className="text-[#FF6B5B] mt-0.5 shrink-0" aria-hidden="true" />
           <div className="text-sm text-[#F3F3EF] flex-1">
@@ -55,7 +63,7 @@ export default function OpsPulseTab() {
               </div>
             ) : (
               <button
-                onClick={() => setDispatched(true)}
+                onClick={dispatch}
                 className="mt-2.5 px-3.5 py-1.5 rounded-full bg-[#FF6B5B] text-[#0B140F] text-xs font-semibold hover:brightness-105 active:scale-95 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#FF6B5B] focus-visible:outline-none"
               >
                 Deploy marshals

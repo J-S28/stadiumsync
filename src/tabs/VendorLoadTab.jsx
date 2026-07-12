@@ -9,7 +9,7 @@ export default function VendorLoadTab() {
     <div className="space-y-4">
       <Card className="p-5">
         <SectionLabel>Vendor wait times</SectionLabel>
-        <div style={{ width: "100%", height: 180 }}>
+        <div className="chart-breathe" style={{ width: "100%", height: 180 }}>
           <ResponsiveContainer>
             <BarChart data={VENDOR_LOAD} layout="vertical" margin={{ left: 10 }}>
               <CartesianGrid stroke="#223328" horizontal={false} />

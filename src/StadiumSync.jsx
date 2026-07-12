@@ -3,19 +3,28 @@ import {
   MapPin, Utensils, MessageCircle, Bus, Activity, Users, AlertTriangle,
   Send, Navigation, Clock, Package, Leaf,
   Volume2, Accessibility, ShieldCheck, Plus, Minus,
-  Radio, Zap, Sparkles, ArrowRight, Lock, LogOut, CheckCircle2, X
+  Radio, Zap, Sparkles, ArrowRight, Lock, LogOut, CheckCircle2, X,
+  Headset, Siren, DoorOpen, Clapperboard, Ear, MapPinned,
 } from "lucide-react";
-import { Card, SectionLabel, Pill } from "./shared/ui.jsx";
+import { Card, SectionLabel, Pill, AIBadge } from "./shared/ui.jsx";
 import { densityColor, ZONES } from "./shared/data.js";
 import { STAFF_PIN, TICKET_FORMAT, ASSISTANT_SCRIPT, detectLang, pickReply } from "./lib/assistant.js";
+import { hapticTick, hapticSnap } from "./lib/haptics.js";
 
 // Recharts (~130KB gzipped) is only needed by the staff Ops/Vendors/
 // Sustainability tabs — lazy-loading them keeps that weight out of the
 // attendee bundle entirely and out of the initial staff bundle until the
-// relevant tab is actually opened.
+// relevant tab is actually opened. Every other new module tab is also
+// lazy-loaded so opening a tab you never visit costs nothing.
 const OpsPulseTab = lazy(() => import("./tabs/OpsPulseTab.jsx"));
 const VendorLoadTab = lazy(() => import("./tabs/VendorLoadTab.jsx"));
 const SustainabilityTab = lazy(() => import("./tabs/SustainabilityTab.jsx"));
+const CopilotTab = lazy(() => import("./tabs/CopilotTab.jsx"));
+const IncidentCommandTab = lazy(() => import("./tabs/IncidentCommandTab.jsx"));
+const EgressTab = lazy(() => import("./tabs/EgressTab.jsx"));
+const MatchHubTab = lazy(() => import("./tabs/MatchHubTab.jsx"));
+const AccessPlusTab = lazy(() => import("./tabs/AccessPlusTab.jsx"));
+const FanZoneTab = lazy(() => import("./tabs/FanZoneTab.jsx"));
 
 /* ---------------------------------- THEME ----------------------------------
 Palette:
@@ -305,7 +314,7 @@ const ZoneRow = memo(function ZoneRow({ name, density }) {
       <div className="w-28 text-sm text-[#F3F3EF]">{name}</div>
       <div className="flex-1 h-2 rounded-full bg-[#16281F] overflow-hidden">
         <div
-          className="h-full rounded-full transition-all"
+          className="h-full rounded-full transition-all chart-breathe"
           style={{ width: `${density}%`, background: densityColor(density) }}
         />
       </div>
@@ -374,14 +383,19 @@ function NavigateTab({ profile }) {
           <circle cx="250" cy="95" r="5" fill="#3ED07A" />
           <text x="250" y="112" fill="#8FA69B" fontSize="9" textAnchor="middle">Seat</text>
 
-          {/* live position marker */}
+          {/* live position marker — the onboarding avatar rides the route,
+              visually "becoming" the positional marker instead of a plain dot */}
           <g>
             <animateMotion dur="6s" repeatCount="indefinite" path="M 60 45 Q 140 20 250 95" />
             <circle r="10" fill="#3ED07A" opacity="0.3">
               <animate attributeName="r" values="7;12;7" dur="1.4s" repeatCount="indefinite" />
               <animate attributeName="opacity" values="0.35;0.05;0.35" dur="1.4s" repeatCount="indefinite" />
             </circle>
-            <circle r="4.5" fill="#F3F3EF" stroke="#3ED07A" strokeWidth="2" />
+            <foreignObject x="-9" y="-9" width="18" height="18">
+              <div className="marker-morph w-full h-full rounded-full overflow-hidden ring-2 ring-[#3ED07A] bg-[#0B140F]">
+                <AvatarComp size={18} />
+              </div>
+            </foreignObject>
           </g>
         </svg>
         <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[#3ED07A]">
@@ -408,7 +422,7 @@ function NavigateTab({ profile }) {
         <SectionLabel>Accessibility</SectionLabel>
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={() => setStepFree((v) => !v)}
+            onClick={() => { hapticSnap(); setStepFree((v) => !v); }}
             aria-pressed={stepFree}
             className={`flex items-center gap-2.5 rounded-xl p-3 text-left transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${stepFree ? "bg-[#16281F]" : "bg-[#16281F] opacity-60"}`}
           >
@@ -497,10 +511,15 @@ function OrderTab() {
         </Card>
       )}
 
-      <Card className="p-4 flex items-center gap-3 bg-gradient-to-r from-[#16281F] to-[#10201A]">
+      <button
+        onClick={() => { hapticTick(); add(4); }}
+        aria-label="Add AI pick, Churro + Dip, to order"
+        className="w-full text-left flex items-center gap-3 bg-gradient-to-r from-[#16281F] to-[#10201A] border border-[#223328] rounded-2xl p-4 hover:border-[#2E4A3B] transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"
+      >
         <Zap size={16} className="text-[#FFC24B] shrink-0" aria-hidden="true" />
-        <div className="text-sm text-[#F3F3EF]">AI pick: <span className="text-[#FFC24B] font-medium">Churro + Dip</span> — shortest wait right now (3 min)</div>
-      </Card>
+        <div className="text-sm text-[#F3F3EF] flex-1">AI pick: <span className="text-[#FFC24B] font-medium">Churro + Dip</span> — shortest wait right now (3 min)</div>
+        <AIBadge className="shrink-0" />
+      </button>
 
       <div className="space-y-3">
         {SNACKS.map((s) => (
@@ -710,7 +729,10 @@ function TransportTab() {
         </div>
       </Card>
       <Card className="p-5">
-        <SectionLabel>AI suggestion</SectionLabel>
+        <div className="flex items-center justify-between mb-3">
+          <SectionLabel>AI suggestion</SectionLabel>
+          <AIBadge />
+        </div>
         <p className="text-sm text-[#F3F3EF] leading-relaxed mb-3">
           Post-match surge expected at Metro Blue Line in ~25 min. Leaving via Concourse S and taking Shuttle Line C now avoids the crowd and saves you roughly 15 minutes.
         </p>
@@ -720,7 +742,7 @@ function TransportTab() {
           </div>
         ) : (
           <button
-            onClick={() => setSelected("shuttle")}
+            onClick={() => { hapticTick(); setSelected("shuttle"); }}
             className="px-3.5 py-1.5 rounded-full bg-[#3ED07A] text-[#0B140F] text-xs font-semibold hover:brightness-105 active:scale-95 transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B140F] focus-visible:ring-[#3ED07A] focus-visible:outline-none"
           >
             Use this route
@@ -738,12 +760,18 @@ const FAN_TABS = [
   { id: "order", label: "Order", icon: Utensils, render: OrderTab },
   { id: "assistant", label: "Assistant", icon: MessageCircle, render: AssistantTab },
   { id: "transport", label: "Transport", icon: Bus, render: TransportTab },
+  { id: "matchhub", label: "Match Hub", icon: Clapperboard, render: MatchHubTab },
+  { id: "access-plus", label: "Access+", icon: Ear, render: AccessPlusTab },
+  { id: "fanzone", label: "Fan Zone", icon: MapPinned, render: FanZoneTab },
 ];
 
 const STAFF_TABS = [
   { id: "pulse", label: "Ops Pulse", icon: Activity, render: OpsPulseTab },
   { id: "vendor", label: "Vendors", icon: Package, render: VendorLoadTab },
   { id: "sustain", label: "Sustainability", icon: Leaf, render: SustainabilityTab },
+  { id: "copilot", label: "Copilot", icon: Headset, render: CopilotTab },
+  { id: "incident", label: "Incident Command", icon: Siren, render: IncidentCommandTab },
+  { id: "egress", label: "Egress", icon: DoorOpen, render: EgressTab },
 ];
 
 export default function StadiumSync() {

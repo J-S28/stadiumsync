@@ -2,6 +2,20 @@
 // lazy-loaded staff tabs. Component-only exports (see ./data.js for the
 // pure data/logic half of the split) so Fast Refresh works cleanly here.
 
+import { Sparkles } from "lucide-react";
+
+// The app's "AI-suggested action" signature: a pulsing pink-to-teal
+// gradient badge, reserved for GenAI-generated content and dispatch
+// suggestions so that accent reads as one consistent visual language
+// wherever the model is actually doing the deciding.
+export function AIBadge({ className = "", label = "AI" }) {
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold text-white bg-gradient-to-r from-[#FF3D8A] to-[#22D3C5] animate-pulse ${className}`}>
+      <Sparkles size={10} aria-hidden="true" /> {label}
+    </span>
+  );
+}
+
 export function Pill({ children, tone = "default" }) {
   const tones = {
     default: "bg-[#16281F] text-[#8FA69B] border-[#223328]",

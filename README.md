@@ -39,6 +39,35 @@ StadiumSync is one AI layer serving two audiences from the same live data — sa
 | **Accessibility assistance** | A real step-free routing toggle and **Audio wayfinding** that actually speaks directions aloud via the browser's Speech Synthesis API | — |
 | **Real-time operational intelligence** | Attendee actions (chat questions, routes taken) feed the same backend staff are watching | Vendor wait/stock alerts and sustainability (waste diversion, compost routing) round out the Ops Console |
 
+## Extended modules
+
+A second round of additions goes deeper on both sides — same "one AI layer, two audiences" model, more surface area on each:
+
+**Operations-facing**
+
+| Module | What it does | Honesty note |
+|---|---|---|
+| **Volunteer Copilot** (`CopilotTab`) | A protocol-lookup chat grounded in a demo operations-manual excerpt (lost child, rejected ticket, medical, spill, weather) — real Claude call, mode `protocol`. Plus a **Dynamic re-routing** card that pings nearby volunteers with a generated redirect brief when Ops Pulse flags a crowd spike. | The re-routing "ping" is a local simulation (same pattern as the existing Deploy Marshals/Dispatch Cart buttons), not a live push to real devices. |
+| **Incident Command** (`IncidentCommandTab`) | An **incident summarizer**: feeds independent mock reports (security feed, volunteer radio, social sentiment) to Claude (mode `incident`) and gets back one alert + a concrete deployment recommendation. Plus **Automated Comms**: generates a PA announcement and push notification in a chosen language (mode `comms`) from a one-line incident description. | The three source reports are demo data, not live feeds — the AI reasoning over them is real. |
+| **Egress Optimizer** (`EgressTab`) | Simulates a transit delay and shows how wayfinding guidance would adjust — pacing attendees toward a Fan Zone instead of a backed-up transit stop. | Fully local simulation, consistent with the rest of the Ops Console's actionable cards — no live transit API. |
+
+**Attendee-facing**
+
+| Module | What it does | Honesty note |
+|---|---|---|
+| **Match Hub** (`MatchHubTab`) | **AI commentary**: pick tactical or team-biased style, a team, and a moment, and Claude (mode `commentary`) generates 2-3 sentences of spoken-word commentary, playable aloud via Speech Synthesis. Plus **AR Match Stats**. | AR Match Stats is a clearly labeled **concept preview** — a real live camera overlay needs camera access and a broadcast feed this demo doesn't have, so it's shown as a static mockup of the intended layout, not faked as working. |
+| **Access+** (`AccessPlusTab`) | **Sensory management**: quiet-room wait times and a loud-moment warning (pyrotechnics/halftime alerts). **Live captions**: a real synced-caption panel of PA announcements. | The brief called for a sign-language avatar; there's no accessible generation model for that, so live captions — genuinely useful and genuinely working — ship instead, with an explicit in-UI note about the avatar being out of scope for this build. |
+| **Fan Zone Link** (`FanZoneTab`) | Nearby official Fan Zone wait times, live music schedules, and one-tap seat-to-Fan-Zone routing. | Demo data (no live Fan Zone API), same fidelity as the rest of the app's venue data. |
+
+**Design system additions** — applied to the new modules and to every existing "AI-suggested action" (Deploy Marshals, Dispatch Cart, the Order tab's AI pick, the Transport AI suggestion), *not* as a full app-wide re-theme (the existing dark palette stays as-is everywhere else — a full light/dark split was judged too high-risk to retrofit across a tested, working UI this close to submission):
+
+- **AI accent** — a pulsating pink-to-teal gradient badge (`AIBadge` in `src/shared/ui.jsx`) marks anywhere content is genuinely model-generated or model-suggested, so that visual language means the same thing everywhere it appears.
+- **Host-nation gradient** — reserved for the Match Hub's primary CTA, a nod to the Canada/Mexico/USA co-hosting.
+- **Avatar → marker morph** — the onboarding avatar rides the Navigate tab's route as the live position marker (a `<foreignObject>` inside the route SVG) instead of a plain dot, with a spring-eased pop-in on mount (`.marker-morph` in `src/index.css`).
+- **"Breathing" charts** — a slow ambient glow pulse (`.chart-breathe`) on the zone-density bars, donut, and vendor chart, signaling "live" without fabricating fake fluctuating numbers that would contradict the specific figures the assistant and README already reference.
+- **Haptics** (`src/lib/haptics.js`) — a sharp tick on the AI pick, a sustained pulse on marshal/cart dispatch, a firm snap on the step-free toggle, via `navigator.vibrate()`. **Real but partial**: only Android Chrome/Firefox implement the Vibration API — iOS Safari and desktop browsers have no implementation at all, so these silently no-op there rather than faking a vibration that isn't happening.
+- All of the above respects `prefers-reduced-motion` (already globally overridden in `src/index.css`).
+
 Role selection happens once, at the landing page — not inside the app. There's no Attendee/Operations toggle once you're in; each session commits to one role, and a small exit icon next to the "Live" pill returns to the landing page to switch:
 
 - **Attendee tab:** pick an avatar (mascot-style illustrated characters), a name, and a ticket ID. Real ticket IDs are unique per attendee, so there's no single "correct" value — any input that looks like a ticket ID (6+ letters/digits/dashes, e.g. `WC26-118014`) is accepted, the same way a lightweight client-side format check would work before hitting a real ticketing system.
@@ -53,31 +82,36 @@ These are stand-ins for real ticket verification and staff authentication — en
 
 ## How GenAI is used
 
-The in-app assistant (`AssistantTab`) is backed by **Claude (`claude-opus-4-8`)** via the Anthropic API — called from a Vercel serverless function (`api/assistant.js`), never directly from the browser, so the API key is never exposed to the client.
+Every Claude call in the app goes through one Vercel serverless function (`api/assistant.js`), backed by **Claude (`claude-opus-4-8`)** via the Anthropic API — never called directly from the browser, so the API key is never exposed to the client. A validated `mode` enum selects one of five fixed system prompts server-side (`attendee`, `protocol`, `incident`, `comms`, `commentary`) — the client picks a mode, never the prompt text itself, so there's no path for user input to inject into what Claude is told to do:
 
-- The system prompt grounds every answer in the stadium's actual live state (zone density, gate congestion, vendor wait times, transit ETAs, accessibility routes) — so answers like "what's my fastest exit" are consistent with what the Ops dashboard is showing staff, not generic advice.
-- Genuinely multilingual, not just a language picker: the system prompt tells Claude to reply in whatever language the attendee just wrote in, so it isn't limited to the five UI pills (EN/ES/PT/FR/DE) — anyone can type in any language and get an answer back in kind.
-- The frontend auto-detects the attendee's language from what they type (no need to tap a pill first) to pick the right scripted fallback bank and highlight the matching pill — this only affects the offline fallback; the live Claude path already replies in-language by default.
-- If the API is unreachable (no key configured, offline, rate-limited), the UI falls back gracefully to a scripted responder so the demo never breaks mid-presentation.
+- **`attendee`** (`AssistantTab`) — grounds every answer in the stadium's actual live state (zone density, gate congestion, vendor wait times, transit ETAs) and always replies in whatever language the attendee just typed in, not just the five UI pills (EN/ES/PT/FR/DE).
+- **`protocol`** (`CopilotTab`, staff) — answers volunteer questions from a demo operations-manual excerpt (lost child, rejected ticket, medical, spill, weather), escalating to a supervisor rather than guessing outside that excerpt.
+- **`incident`** (`IncidentCommandTab`, staff) — aggregates independent mock reports into one alert and a concrete deployment recommendation.
+- **`comms`** (`IncidentCommandTab`, staff) — generates a PA announcement and push notification in a chosen language from a short incident description.
+- **`commentary`** (`MatchHubTab`, attendee) — generates tactical or team-biased match commentary, playable aloud via Speech Synthesis.
+
+Every mode falls back to a scripted offline response (`src/lib/{assistant,protocol,incident,commentary}.js`) if the API is unreachable — no key configured, offline, or rate-limited — so the demo never breaks mid-presentation.
 
 ## Architecture
 
 ```
 Browser (React SPA)
   │
-  ├─ Attendee tabs: Navigate · Order · Assistant · Transport
-  ├─ Operations tabs: Ops Pulse · Vendors · Sustainability  (code-split, lazy-loaded)
+  ├─ Attendee tabs: Navigate · Order · Assistant · Transport · Match Hub · Access+ · Fan Zone
+  ├─ Operations tabs: Ops Pulse · Vendors · Sustainability · Copilot · Incident Command · Egress
+  │  (every tab beyond Navigate/Order/Assistant/Transport is code-split, lazy-loaded)
   │
   └─ POST /api/assistant  ──────────────►  Vercel serverless function
                                               │  · Zod-validates the request body
                                               │  · rate-limits per client
-                                              │  · calls Claude with a system prompt
-                                              │    grounded in the live venue state
+                                              │  · mode ∈ {attendee, protocol, incident,
+                                              │    comms, commentary} selects one of five
+                                              │    fixed system prompts server-side
                                               ▼
                                             Anthropic API (claude-opus-4-8)
 ```
 
-The Recharts-based Operations tabs (Ops Pulse, Vendors, Sustainability) are dynamically `import()`ed — attendees never load the charting library at all, and staff only pay for it once they open a tab that needs it. See [Performance](#performance) below.
+The Recharts-based tabs (Ops Pulse, Vendors, Sustainability) are dynamically `import()`ed — attendees never load the charting library at all. Every other new tab (Copilot, Incident Command, Egress, Match Hub, Access+, Fan Zone) is lazy-loaded too, so opening a tab you never visit costs nothing. See [Performance](#performance) below.
 
 ## Tech stack
 
@@ -105,14 +139,16 @@ The dev server serves the frontend only — the `/api/assistant` route needs the
 ```bash
 npm test              # unit + component tests (Vitest + React Testing Library)
 npm run test:watch    # same, in watch mode
-npm run test:coverage # with a coverage report (currently ~97% statements)
+npm run test:coverage # with a coverage report + enforced thresholds (currently ~96% statements)
 npm run test:e2e      # Playwright end-to-end + axe-core accessibility scans
 ```
 
-- **Unit tests** (`src/test/utils.test.js`) cover the pure logic: language auto-detection, keyword-based scripted replies, zone density color thresholds, and the ticket-ID format check.
-- **Component tests** (`src/test/StadiumSync.test.jsx`) drive the app through React Testing Library: onboarding gates (both roles, valid/invalid credentials), the order → checkout → confirmation flow, transport route selection, the Ops Console's actionable AI suggestions, and the accessibility toggles.
-- **API tests** (`api/assistant.test.js`) mock the Anthropic SDK to cover method/validation errors, the success path, auth/rate-limit/upstream-error handling, and the in-memory rate limiter — with no real network calls.
-- **E2E tests** (`e2e/*.spec.js`) run the built app in a real headless browser: the full attendee and operations journeys, plus three `@axe-core/playwright` scans (landing page, attendee Navigate tab, Ops Console) that currently report **zero WCAG 2.0/2.1 A/AA violations**, and a keyboard-only walkthrough of onboarding.
+- **Unit tests** (`src/test/utils.test.js`, `src/test/lib.test.js`) cover the pure logic: language auto-detection, keyword-based scripted replies (attendee + protocol), zone density color thresholds, the ticket-ID format check, incident/comms response parsing, the offline fallback banks, the `callAssistant` client, and the haptics wrapper (including graceful no-op when the Vibration API is unsupported).
+- **Component tests** (`src/test/StadiumSync.test.jsx`, 88 tests total across both files) drive the app through React Testing Library: onboarding gates, the order → checkout → confirmation flow, transport route selection, the Ops Console's actionable AI suggestions, the accessibility toggles, and every one of the six new modules — Copilot, Incident Command, Egress, Match Hub, Access+, Fan Zone — covering both the offline-fallback path and the live-API-success path.
+- **API tests** (`api/assistant.test.js`, 18 tests) mock the Anthropic SDK to cover method/validation errors, the success path, auth/rate-limit/upstream-error handling, the in-memory rate limiter, and that each of the five `mode` values selects the correct system prompt — with no real network calls.
+- **E2E tests** (`e2e/*.spec.js`, 28 tests) run the built app in a real headless browser: the full attendee and operations journeys including all six new modules, plus five `@axe-core/playwright` scans (landing page, attendee Navigate tab, Ops Console, Match Hub, Incident Command) that currently report **zero WCAG 2.0/2.1 A/AA violations**, and a keyboard-only walkthrough of onboarding.
+
+Coverage thresholds (`vite.config.js`) are enforced, not just reported — `test:coverage` fails the run if statements/lines drop below 90%, functions below 90%, or branches below 80%.
 
 CI runs all of the above — lint, unit tests with coverage, build, and E2E — on every push and pull request (`.github/workflows/ci.yml`).
 
@@ -158,27 +194,40 @@ stadiumsync/
 ├── .github/workflows/
 │   └── ci.yml               # lint → unit tests + coverage → build → e2e, on every push/PR
 ├── api/
-│   ├── assistant.js         # Claude API call — server-side only, Zod-validated, rate-limited
-│   └── assistant.test.js    # API handler tests (mocked Anthropic SDK)
+│   ├── assistant.js         # Claude API call — server-side only, Zod-validated, rate-limited,
+│   │                         # mode-selected system prompt (attendee/protocol/incident/comms/commentary)
+│   └── assistant.test.js    # API handler tests (mocked Anthropic SDK), incl. per-mode prompt checks
 ├── e2e/
-│   ├── attendee-flow.spec.js
-│   ├── operations-flow.spec.js
-│   └── accessibility.spec.js  # axe-core WCAG scans + keyboard-only walkthrough
+│   ├── attendee-flow.spec.js    # incl. Match Hub, Access+, Fan Zone
+│   ├── operations-flow.spec.js  # incl. Copilot, Incident Command, Egress
+│   └── accessibility.spec.js    # axe-core WCAG scans + keyboard-only walkthrough
 ├── src/
 │   ├── StadiumSync.jsx       # main app: onboarding, attendee tabs, shell/routing
 │   ├── shared/
 │   │   ├── data.js           # pure data + densityColor, shared with the lazy tabs
-│   │   └── ui.jsx             # Card/Pill/SectionLabel — presentational only
+│   │   └── ui.jsx             # Card/Pill/SectionLabel/AIBadge — presentational only
 │   ├── lib/
-│   │   └── assistant.js      # scripted reply bank + language detection (pure, unit-tested)
-│   ├── tabs/                 # code-split Operations tabs (Recharts lives only here)
+│   │   ├── assistant.js      # attendee scripted reply bank + language detection
+│   │   ├── protocol.js       # Volunteer Copilot offline fallback bank
+│   │   ├── incident.js       # incident/comms response parsing + mock reports + fallbacks
+│   │   ├── commentary.js     # Match Hub offline fallback commentary
+│   │   ├── callAssistant.js  # shared client for POST /api/assistant
+│   │   └── haptics.js        # Vibration API wrapper (progressive enhancement)
+│   ├── tabs/                 # code-split tabs (lazy-loaded)
 │   │   ├── OpsPulseTab.jsx
 │   │   ├── VendorLoadTab.jsx
-│   │   └── SustainabilityTab.jsx
+│   │   ├── SustainabilityTab.jsx
+│   │   ├── CopilotTab.jsx        # staff — Volunteer Copilot
+│   │   ├── IncidentCommandTab.jsx # staff — incident summarizer + automated comms
+│   │   ├── EgressTab.jsx         # staff — transit-linked pacing
+│   │   ├── MatchHubTab.jsx       # attendee — AI commentary + AR concept preview
+│   │   ├── AccessPlusTab.jsx     # attendee — sensory management + live captions
+│   │   └── FanZoneTab.jsx        # attendee — Fan Zone wait times/music/routing
 │   ├── test/
-│   │   ├── setup.js          # jsdom polyfills (speechSynthesis, ResizeObserver, fetch)
+│   │   ├── setup.js          # jsdom polyfills (speechSynthesis, ResizeObserver, fetch, vibrate)
 │   │   ├── utils.test.js     # pure-function unit tests
-│   │   └── StadiumSync.test.jsx  # component/integration tests
+│   │   ├── lib.test.js       # tests for src/lib/* (protocol, incident, commentary, haptics, callAssistant)
+│   │   └── StadiumSync.test.jsx  # component/integration tests, all tabs
 │   ├── App.jsx
 │   └── main.jsx
 ├── playwright.config.js

@@ -123,6 +123,54 @@ describe('POST /api/assistant', () => {
     expect(res.body.error).toBe('assistant_unavailable');
   });
 
+  it('defaults to the attendee system prompt when no mode is given', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'hi' }] }, ip: '1.1.2.1' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('StadiumSync assistant') }));
+  });
+
+  it('uses the protocol system prompt for mode "protocol"', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'lost child' }], mode: 'protocol' }, ip: '1.1.2.2' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('Volunteer Copilot') }));
+  });
+
+  it('uses the incident summarizer system prompt for mode "incident"', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'report' }], mode: 'incident' }, ip: '1.1.2.3' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('Incident Command summarizer') }));
+  });
+
+  it('uses the target language in the comms system prompt for mode "comms"', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'gate 4 crowded' }], mode: 'comms', lang: 'es' }, ip: '1.1.2.4' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('Spanish') }));
+  });
+
+  it('uses the biased commentary system prompt for mode "commentary" with style "biased"', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'goal!' }], mode: 'commentary', style: 'biased' }, ip: '1.1.2.5' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('team-biased') }));
+  });
+
+  it('uses the tactical commentary system prompt for mode "commentary" with style "tactical"', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'corner kick' }], mode: 'commentary', style: 'tactical' }, ip: '1.1.2.6' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('technical FIFA World Cup 2026 match analyst') }));
+  });
+
+  it('rejects an unknown mode with 400', async () => {
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'hi' }], mode: 'nonsense' }, ip: '1.1.2.7' }), res);
+    expect(res.statusCode).toBe(400);
+  });
+
   it('rate-limits a client after too many requests in the window', async () => {
     createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
     const ip = '198.51.100.42';

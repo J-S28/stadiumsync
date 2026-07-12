@@ -80,4 +80,27 @@ test.describe('Attendee flow', () => {
     await expect(page.getByRole('tab', { name: /attendee/i })).toBeVisible();
     await expect(page.getByRole('tab', { name: /operations/i })).toBeVisible();
   });
+
+  test('generates AI match commentary in the Match Hub tab', async ({ page }) => {
+    await enterAsAttendee(page);
+    await page.getByRole('tab', { name: /match hub/i }).click();
+    await page.getByRole('button', { name: /generate commentary/i }).click();
+    await expect(page.getByText(/tactical shift/i)).toBeVisible();
+    await expect(page.getByText(/a live ar overlay needs camera/i)).toBeVisible();
+  });
+
+  test('shows sensory guidance and live captions in the Access\\+ tab', async ({ page }) => {
+    await enterAsAttendee(page);
+    await page.getByRole('tab', { name: /access\+/i }).click();
+    await expect(page.getByText(/pyrotechnics expected at halftime/i)).toBeVisible();
+    await page.getByRole('button', { name: /^off$/i }).click();
+    await expect(page.getByText(/kickoff in 5 minutes/i)).toBeVisible();
+  });
+
+  test('routes to the nearest Fan Zone', async ({ page }) => {
+    await enterAsAttendee(page);
+    await page.getByRole('tab', { name: /fan zone/i }).click();
+    await page.getByRole('button', { name: /route me there/i }).click();
+    await expect(page.getByText(/showing route to zócalo fan fest/i)).toBeVisible();
+  });
 });

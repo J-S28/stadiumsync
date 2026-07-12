@@ -37,6 +37,35 @@ test.describe('Accessibility (axe-core, WCAG 2.0/2.1 A/AA)', () => {
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
 
+  test('the Match Hub tab has no automatically detectable violations', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /boy avatar/i }).click();
+    await page.getByLabel(/your name/i).fill('Leo');
+    await page.getByLabel(/ticket id/i).fill('WC26-118014');
+    await page.getByRole('button', { name: /enter the stadium/i }).click();
+    await page.getByRole('tab', { name: /match hub/i }).click();
+    await expect(page.getByRole('heading', { name: 'AI commentary' })).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  });
+
+  test('the Incident Command tab has no automatically detectable violations', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('tab', { name: /operations/i }).click();
+    await page.getByLabel(/operations passcode/i).fill('2026');
+    await page.getByRole('button', { name: /unlock console/i }).click();
+    await page.getByRole('tab', { name: /incident command/i }).click();
+    await expect(page.getByText('Incident summarizer')).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
+  });
+
   test('full onboarding-to-navigate journey is keyboard-only operable', async ({ page }) => {
     await page.goto('/');
     // Skip link -> tab picker -> avatar grid -> name -> ticket -> submit, all via keyboard

@@ -46,4 +46,40 @@ test.describe('Operations dashboard', () => {
     await page.getByRole('button', { name: /dispatch cart/i }).click();
     await expect(page.getByText(/collection cart routed to fan zone/i)).toBeVisible();
   });
+
+  test('answers a volunteer protocol question in the Copilot tab', async ({ page }) => {
+    await enterAsOperations(page);
+    await page.getByRole('tab', { name: /copilot/i }).click();
+    await page.getByLabel(/ask the protocol assistant/i).fill('a child is lost near Gate 3');
+    await page.getByRole('button', { name: /^send$/i }).click();
+    await expect(page.getByText(/Guest Services/i)).toBeVisible();
+  });
+
+  test('pings nearby volunteers for dynamic re-routing', async ({ page }) => {
+    await enterAsOperations(page);
+    await page.getByRole('tab', { name: /copilot/i }).click();
+    await page.getByRole('button', { name: /ping nearby volunteers/i }).click();
+    await expect(page.getByText(/brief sent/i)).toBeVisible();
+  });
+
+  test('summarizes multi-source reports in the Incident Command tab', async ({ page }) => {
+    await enterAsOperations(page);
+    await page.getByRole('tab', { name: /incident command/i }).click();
+    await page.getByRole('button', { name: /summarize with ai/i }).click();
+    await expect(page.getByText(/consistent across security, volunteer/i)).toBeVisible();
+  });
+
+  test('generates an automated PA announcement', async ({ page }) => {
+    await enterAsOperations(page);
+    await page.getByRole('tab', { name: /incident command/i }).click();
+    await page.getByRole('button', { name: /generate announcement/i }).click();
+    await expect(page.getByText(/for a faster exit, please use concourse s/i)).toBeVisible();
+  });
+
+  test('simulates a transit delay in the Egress tab', async ({ page }) => {
+    await enterAsOperations(page);
+    await page.getByRole('tab', { name: /egress/i }).click();
+    await page.getByRole('button', { name: /simulate transit delay/i }).click();
+    await expect(page.getByText(/transit delay detected/i)).toBeVisible();
+  });
 });

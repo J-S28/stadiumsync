@@ -254,4 +254,177 @@ describe('Order tab cart controls', () => {
 
     expect(screen.getAllByRole('button', { name: /add .* to order/i }).length).toBeGreaterThan(0);
   });
+
+  it('adds the AI pick directly from the banner', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /order/i }));
+
+    await user.click(screen.getByRole('button', { name: /add ai pick, churro \+ dip, to order/i }));
+    expect(await screen.findByRole('button', { name: /remove one churro \+ dip/i })).toBeInTheDocument();
+  });
+});
+
+describe('Volunteer Copilot tab (Ops Console)', () => {
+  it('answers a protocol question with the offline fallback', async () => {
+    const user = userEvent.setup();
+    await enterAsOperations(user);
+    await screen.findByText('Ops Console');
+    await user.click(screen.getByRole('tab', { name: /copilot/i }));
+
+    const input = await screen.findByLabelText(/ask the protocol assistant/i);
+    await user.type(input, 'a child is lost near Gate 3');
+    await user.click(screen.getByRole('button', { name: /^send$/i }));
+
+    expect(await screen.findByText(/Guest Services/i)).toBeInTheDocument();
+  });
+
+  it('uses the real API reply when the network call succeeds', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ reply: 'Radio Guest Services on channel 3 right away.' }),
+    });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /copilot/i }));
+
+      const input = await screen.findByLabelText(/ask the protocol assistant/i);
+      await user.type(input, 'a child is lost');
+      await user.click(screen.getByRole('button', { name: /^send$/i }));
+
+      expect(await screen.findByText(/radio guest services on channel 3 right away/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('sends a dynamic re-routing brief to nearby volunteers', async () => {
+    const user = userEvent.setup();
+    await enterAsOperations(user);
+    await screen.findByText('Ops Console');
+    await user.click(screen.getByRole('tab', { name: /copilot/i }));
+
+    await user.click(await screen.findByRole('button', { name: /ping nearby volunteers/i }));
+    expect(await screen.findByText(/brief sent/i)).toBeInTheDocument();
+  });
+});
+
+describe('Incident Command tab (Ops Console)', () => {
+  it('summarizes multi-source reports with the offline fallback', async () => {
+    const user = userEvent.setup();
+    await enterAsOperations(user);
+    await screen.findByText('Ops Console');
+    await user.click(screen.getByRole('tab', { name: /incident command/i }));
+
+    await user.click(await screen.findByRole('button', { name: /summarize with ai/i }));
+    expect(await screen.findByText(/consistent across security, volunteer/i)).toBeInTheDocument();
+  });
+
+  it('generates automated comms with the offline fallback', async () => {
+    const user = userEvent.setup();
+    await enterAsOperations(user);
+    await screen.findByText('Ops Console');
+    await user.click(screen.getByRole('tab', { name: /incident command/i }));
+
+    await user.click(await screen.findByRole('button', { name: /generate announcement/i }));
+    expect(await screen.findByText(/for a faster exit, please use concourse s/i)).toBeInTheDocument();
+  });
+
+  it('lets staff edit the incident description and pick a target language before generating', async () => {
+    const user = userEvent.setup();
+    await enterAsOperations(user);
+    await screen.findByText('Ops Console');
+    await user.click(screen.getByRole('tab', { name: /incident command/i }));
+
+    const description = await screen.findByLabelText(/incident description/i);
+    await user.clear(description);
+    await user.type(description, 'Spill near the concession stand at Concourse N.');
+    await user.click(screen.getByRole('button', { name: /generate in es/i }));
+    expect(screen.getByRole('button', { name: /generate in es/i })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: /generate announcement/i }));
+    expect(await screen.findByText(/for a faster exit, please use concourse s/i)).toBeInTheDocument();
+  });
+});
+
+describe('Egress tab (Ops Console)', () => {
+  it('simulates a transit delay and shows adjusted pacing guidance', async () => {
+    const user = userEvent.setup();
+    await enterAsOperations(user);
+    await screen.findByText('Ops Console');
+    await user.click(screen.getByRole('tab', { name: /egress/i }));
+
+    const toggle = await screen.findByRole('button', { name: /simulate transit delay/i });
+    await user.click(toggle);
+    expect(await screen.findByText(/transit delay detected/i)).toBeInTheDocument();
+    expect(screen.getByText('12 min delay')).toBeInTheDocument();
+  });
+});
+
+describe('Match Hub tab', () => {
+  it('generates commentary with the offline fallback and plays it aloud', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /match hub/i }));
+
+    await user.click(await screen.findByRole('button', { name: /generate commentary/i }));
+    expect(await screen.findByText(/tactical shift/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /play commentary aloud/i }));
+    expect(window.speechSynthesis.speak).toHaveBeenCalledTimes(1);
+  });
+
+  it('generates team-biased commentary for a chosen team and moment', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /match hub/i }));
+
+    await user.click(await screen.findByRole('tab', { name: /team-biased/i }));
+    const teamInput = screen.getByLabelText('Team');
+    await user.clear(teamInput);
+    await user.type(teamInput, 'Mexico');
+    await user.click(screen.getByRole('button', { name: /^goal!$/i }));
+    await user.click(screen.getByRole('button', { name: /generate commentary/i }));
+
+    expect(await screen.findByText(/what a moment/i)).toBeInTheDocument();
+  });
+});
+
+describe('Access+ tab', () => {
+  it('shows a loud-moment warning by default and toggles live captions', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /access\+/i }));
+
+    expect(await screen.findByText(/pyrotechnics expected at halftime/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^off$/i }));
+    expect(await screen.findByText(/kickoff in 5 minutes/i)).toBeInTheDocument();
+  });
+
+  it('turns off loud-moment warnings on request', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /access\+/i }));
+
+    const toggle = await screen.findByRole('button', { name: /loud-moment warnings/i });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByText(/pyrotechnics expected at halftime/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('Fan Zone tab', () => {
+  it('routes to the nearest Fan Zone on request', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /fan zone/i }));
+
+    await user.click(await screen.findByRole('button', { name: /route me there/i }));
+    expect(await screen.findByText(/showing route to zócalo fan fest/i)).toBeInTheDocument();
+  });
 });
