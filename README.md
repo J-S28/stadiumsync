@@ -7,6 +7,20 @@ A GenAI-powered companion for attendees, organizers, and venue staff at Estadio 
 
 ---
 
+## Challenge 4 requirement mapping
+
+Every capability called for in *Smart Stadiums & Tournament Operations* is implemented and live, not mocked:
+
+| Requirement | Implemented as | Where |
+|---|---|---|
+| AI-powered navigation | Live GPS-style wayfinding with an animated position marker and a step-free routing toggle | `NavigateTab` in [`src/StadiumSync.jsx`](src/StadiumSync.jsx) |
+| Multilingual assistant | Claude-backed chat that detects and replies in the attendee's typed language (EN/ES/PT/FR/DE tested, any language via the live API) | `AssistantTab` + [`api/assistant.js`](api/assistant.js) |
+| Crowd / queue prediction | Live zone-density thresholds surfaced to attendees as reroute suggestions, and to staff as a spike-detection signal ("47 attendees asked about Gate 4 in 6 minutes — a 5x spike") | Zone bars in `NavigateTab`; `OpsPulseTab` in [`src/tabs/OpsPulseTab.jsx`](src/tabs/OpsPulseTab.jsx) |
+| Transport recommendation | An AI-suggested route with one-tap selection that highlights it on a live map, plus surge-timing guidance | `TransportTab` in [`src/StadiumSync.jsx`](src/StadiumSync.jsx) |
+| Tournament operations dashboard | A real-time Ops Console: zone density, vendor wait/stock alerts, sustainability/waste diversion, all with actionable one-tap responses | `OpsPulseTab`, `VendorLoadTab`, `SustainabilityTab` in [`src/tabs/`](src/tabs/) |
+| Accessibility assistance | A real step-free routing toggle and Audio wayfinding that speaks directions aloud via the Speech Synthesis API — not just a settings checkbox | Accessibility card in `NavigateTab`, [`src/StadiumSync.jsx`](src/StadiumSync.jsx) |
+| Real-time attendee↔operations feedback loop | Attendee assistant questions feed the same congestion signal the Ops Console surfaces as an actionable alert — one data model, two views | `AssistantTab` ↔ `OpsPulseTab` |
+
 ## The problem
 
 A World Cup stadium is one of the hardest real-time coordination problems in live events: 68,000+ people need directions, food, transport, and safety information at once, while staff need the same signal in aggregate to act on it — a gate approaching capacity, a vendor running low on stock, a spike in "nearest exit" questions that predicts a crowd surge before it happens. Static signage and a generic help desk can't keep up with conditions that change minute to minute.
@@ -105,15 +119,19 @@ CI runs all of the above — lint, unit tests with coverage, build, and E2E — 
 ## Performance
 
 - **Code-split Operations tabs.** `OpsPulseTab`, `VendorLoadTab`, and `SustainabilityTab` (and Recharts itself) are loaded via `React.lazy()` instead of bundled into the main chunk. The attendee-facing bundle never touches the charting library; staff only fetch it once they open a tab that needs it.
-- **Shared primitives module** (`src/shared.jsx`) holds `Card`/`Pill`/`SectionLabel`/data constants so both the main shell and the lazy tabs can import them without duplicating code or creating a circular dependency back into the main bundle.
+- **Shared modules split by kind, not just by reuse**: `src/shared/data.js` (pure data/logic) and `src/shared/ui.jsx` (presentational components) are separate files, both imported by the main shell and the lazy tabs — the split also keeps each file Fast-Refresh-clean (no mixed component/non-component exports).
+- **Memoized list rows.** `SnackRow` (Order), `ZoneRow` (Navigate), and `RouteRow` (Transport) are wrapped in `React.memo` with stable (`useCallback`) handlers, so incrementing one cart item or toggling step-free routing re-renders only the row that changed, not the whole list.
 
 ## Accessibility
 
 Verified with `@axe-core/playwright` against the production build (zero violations on the pages tested), plus manual review:
 
+- Semantic structure: a real `<h1>` per screen, `SectionLabel` renders as `<h2>`, and the active tab panel lives in a `<main>` landmark — screen reader users can navigate by heading/landmark instead of relying on visual layout.
+- A "Skip to main content" / "Skip to role selection" link, visually hidden until focused, so keyboard users can bypass the header and tab bar.
 - `aria-label` on every icon-only control (send, switch-role, cart +/-, dismiss) and on form inputs whose visible label was previously just styled text with no programmatic association.
 - `aria-pressed` on toggle-style controls (avatar picker, step-free/audio toggles, route selection, language pills) and `role="tab"` / `aria-selected` on both tab bars, since state was previously conveyed by color alone.
 - `aria-invalid` + `aria-describedby` linking the ticket/passcode inputs to their error or hint text, with `role="alert"` on the error itself.
+- `role="log"`/`aria-live="polite"` on the assistant conversation and `role="status"` on order/dispatch confirmations, so async responses are announced to screen readers instead of only appearing visually.
 - Visible `focus-visible` rings on every interactive element.
 - A global `prefers-reduced-motion` override (`src/index.css`) collapses animation/transition duration for users who request it.
 - Color contrast: axe flagged one real WCAG AA failure (footer caption text at 3.31:1) during this pass — fixed by switching it to the app's existing secondary-text token, which already passes.
@@ -148,7 +166,11 @@ stadiumsync/
 │   └── accessibility.spec.js  # axe-core WCAG scans + keyboard-only walkthrough
 ├── src/
 │   ├── StadiumSync.jsx       # main app: onboarding, attendee tabs, shell/routing
-│   ├── shared.jsx            # Card/Pill/SectionLabel + data shared with the lazy tabs
+│   ├── shared/
+│   │   ├── data.js           # pure data + densityColor, shared with the lazy tabs
+│   │   └── ui.jsx             # Card/Pill/SectionLabel — presentational only
+│   ├── lib/
+│   │   └── assistant.js      # scripted reply bank + language detection (pure, unit-tested)
 │   ├── tabs/                 # code-split Operations tabs (Recharts lives only here)
 │   │   ├── OpsPulseTab.jsx
 │   │   ├── VendorLoadTab.jsx
@@ -160,7 +182,7 @@ stadiumsync/
 │   ├── App.jsx
 │   └── main.jsx
 ├── playwright.config.js
-├── vite.config.js            # includes the Vitest `test` config block
+├── vite.config.js            # includes the Vitest `test` config block (with coverage thresholds)
 ├── vercel.json                # security headers
 ├── .env.example
 └── package.json

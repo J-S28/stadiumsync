@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { detectLang, pickReply, densityColor, TICKET_FORMAT, STAFF_PIN } from '../StadiumSync.jsx';
+import { detectLang, pickReply, TICKET_FORMAT, STAFF_PIN } from '../lib/assistant.js';
+import { densityColor } from '../shared/data.js';
 
 describe('detectLang', () => {
   it('detects Spanish from accented words and markers', () => {

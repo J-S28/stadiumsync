@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Leaf, CheckCircle2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { Card, SectionLabel, SUSTAIN_PIE, PIE_COLORS } from "../shared.jsx";
+import { Card, SectionLabel } from "../shared/ui.jsx";
+import { SUSTAIN_PIE, PIE_COLORS } from "../shared/data.js";
 
 export default function SustainabilityTab() {
   const [dispatched, setDispatched] = useState(false);
@@ -35,7 +36,7 @@ export default function SustainabilityTab() {
         <div className="text-sm text-[#F3F3EF] leading-relaxed flex-1">
           Compost bin near Fan Zone is 89% full — AI suggests routing next collection cart there first to keep diversion rate on target.
           {dispatched ? (
-            <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold">
+            <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold" role="status">
               <CheckCircle2 size={13} aria-hidden="true" /> Collection cart routed to Fan Zone
             </div>
           ) : (

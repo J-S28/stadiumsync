@@ -1,7 +1,8 @@
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
 } from "recharts";
-import { Card, SectionLabel, Pill, VENDOR_LOAD } from "../shared.jsx";
+import { Card, SectionLabel, Pill } from "../shared/ui.jsx";
+import { VENDOR_LOAD } from "../shared/data.js";
 
 export default function VendorLoadTab() {
   return (

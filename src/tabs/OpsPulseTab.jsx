@@ -3,7 +3,8 @@ import { AlertTriangle, TrendingUp, TrendingDown, CheckCircle2 } from "lucide-re
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell,
 } from "recharts";
-import { Card, SectionLabel, densityColor, ZONES } from "../shared.jsx";
+import { Card, SectionLabel } from "../shared/ui.jsx";
+import { densityColor, ZONES } from "../shared/data.js";
 
 export default function OpsPulseTab() {
   const [dispatched, setDispatched] = useState(false);
@@ -49,7 +50,7 @@ export default function OpsPulseTab() {
           <div className="text-sm text-[#F3F3EF] flex-1">
             <span className="font-medium">47 attendees</span> asked the assistant about "nearest exit" near Gate 4 in the last 6 minutes — a 5x spike. Recommend deploying 2 crowd marshals to Gate 4.
             {dispatched ? (
-              <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold">
+              <div className="flex items-center gap-1.5 mt-2.5 text-[#3ED07A] text-xs font-semibold" role="status">
                 <CheckCircle2 size={13} aria-hidden="true" /> 2 marshals dispatched to Gate 4
               </div>
             ) : (

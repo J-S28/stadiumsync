@@ -39,7 +39,8 @@ test.describe('Accessibility (axe-core, WCAG 2.0/2.1 A/AA)', () => {
 
   test('full onboarding-to-navigate journey is keyboard-only operable', async ({ page }) => {
     await page.goto('/');
-    // Tab picker -> avatar grid -> name -> ticket -> submit, all via keyboard
+    // Skip link -> tab picker -> avatar grid -> name -> ticket -> submit, all via keyboard
+    await page.keyboard.press('Tab'); // "Skip to role selection" link
     await page.keyboard.press('Tab'); // Attendee tab
     await page.keyboard.press('Tab'); // Operations tab
     await page.keyboard.press('Tab'); // Boy avatar
@@ -52,5 +53,14 @@ test.describe('Accessibility (axe-core, WCAG 2.0/2.1 A/AA)', () => {
     await page.keyboard.press('Tab'); // submit button
     await page.keyboard.press('Enter');
     await expect(page.getByText('Hey, Ava')).toBeVisible();
+  });
+
+  test('the skip link jumps focus to the main content on activation', async ({ page }) => {
+    await page.goto('/');
+    const skipLink = page.getByRole('link', { name: /skip to role selection/i });
+    await page.keyboard.press('Tab');
+    await expect(skipLink).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#onboarding-main')).toBeVisible();
   });
 });

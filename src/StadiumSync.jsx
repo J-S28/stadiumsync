@@ -1,11 +1,13 @@
-import React, { useState, useRef, useEffect, lazy, Suspense } from "react";
+import React, { useState, useRef, useEffect, useCallback, memo, lazy, Suspense } from "react";
 import {
   MapPin, Utensils, MessageCircle, Bus, Activity, Users, AlertTriangle,
   Send, Navigation, Clock, Package, Leaf,
   Volume2, Accessibility, ShieldCheck, Plus, Minus,
   Radio, Zap, Sparkles, ArrowRight, Lock, LogOut, CheckCircle2, X
 } from "lucide-react";
-import { Card, SectionLabel, Pill, densityColor, ZONES } from "./shared.jsx";
+import { Card, SectionLabel, Pill } from "./shared/ui.jsx";
+import { densityColor, ZONES } from "./shared/data.js";
+import { STAFF_PIN, TICKET_FORMAT, ASSISTANT_SCRIPT, detectLang, pickReply } from "./lib/assistant.js";
 
 // Recharts (~130KB gzipped) is only needed by the staff Ops/Vendors/
 // Sustainability tabs — lazy-loading them keeps that weight out of the
@@ -26,11 +28,6 @@ Palette:
   --ivory:    #F3F3EF   (primary text)
   --mute:     #8FA69B   (secondary text)
 --------------------------------------------------------------------------- */
-
-export const STAFF_PIN = "2026"; // demo-only gate for the staff console (see README)
-// Real ticket IDs are unique per fan, so there's no single "correct" value to
-// check against — validate the shape instead (letters/digits/dashes, 6+ chars).
-export const TICKET_FORMAT = /^[A-Za-z0-9-]{6,}$/;
 
 const TRANSPORT_ROUTES = [
   {
@@ -53,90 +50,6 @@ const SNACKS = [
   { id: 3, name: "Cerveza (16oz)", price: 11, vendor: "Cerveza Bar", eta: "22 min" },
   { id: 4, name: "Churro + Dip", price: 6.5, vendor: "Ice Cream Co.", eta: "3 min" },
 ];
-
-const ASSISTANT_SCRIPT = {
-  en: {
-    greet: "Hi! I'm your StadiumSync assistant. Ask me anything — directions, food, transport, accessibility.",
-    replies: {
-      restroom: "The nearest restroom is 40m past Section 118, to your left after the merch stand. It's showing low wait right now.",
-      exit: "Your fastest exit is Gate 4 — but it's busy (97% capacity). I'd suggest Concourse S, it's 6 minutes slower to walk but you'll exit faster overall.",
-      food: "Churro + Dip has the shortest wait right now (3 min). Want me to add it to your order?",
-      default: "Got it — routing that to the right place. For live wayfinding, tap Navigate; for food, tap Order.",
-    },
-  },
-  es: {
-    greet: "¡Hola! Soy tu asistente de StadiumSync. Pregúntame lo que sea — direcciones, comida, transporte, accesibilidad.",
-    replies: {
-      restroom: "El baño más cercano está a 40m pasando la Sección 118, a tu izquierda después de la tienda. Ahora mismo casi no hay fila.",
-      exit: "Tu salida más rápida es la Puerta 4, pero está muy llena (97%). Te sugiero la Explanada S, tarda 6 minutos más caminando pero saldrás más rápido en total.",
-      food: "Churro + Dip tiene la espera más corta ahora mismo (3 min). ¿Lo agrego a tu pedido?",
-      default: "Entendido — te dirijo al lugar correcto. Para direcciones usa Navegar; para comida usa Pedir.",
-    },
-  },
-  pt: {
-    greet: "Oi! Sou o assistente StadiumSync. Pergunte qualquer coisa — direções, comida, transporte, acessibilidade.",
-    replies: {
-      restroom: "O banheiro mais próximo fica 40m após a Seção 118, à esquerda após a loja. Fila baixa agora.",
-      exit: "Sua saída mais rápida é o Portão 4, mas está lotado (97%). Sugiro o Saguão S — 6 min a mais andando, mas sai mais rápido no total.",
-      food: "Churro + Dip tem a menor espera agora (3 min). Quer que eu adicione ao pedido?",
-      default: "Entendido — encaminhando para o lugar certo. Para rotas, toque em Navegar; para comida, toque em Pedir.",
-    },
-  },
-  fr: {
-    greet: "Salut ! Je suis l'assistant StadiumSync. Demandez-moi n'importe quoi — directions, nourriture, transport, accessibilité.",
-    replies: {
-      restroom: "Les toilettes les plus proches sont à 40m après la Section 118, à gauche après la boutique. L'attente est faible en ce moment.",
-      exit: "Votre sortie la plus rapide est la Porte 4 — mais elle est bondée (97%). Je vous suggère l'Esplanade S, 6 minutes de marche en plus mais vous sortirez plus vite au total.",
-      food: "Churro + sauce a la file la plus courte en ce moment (3 min). Je l'ajoute à votre commande ?",
-      default: "Compris — je vous oriente vers le bon endroit. Pour l'itinéraire, appuyez sur Naviguer ; pour la nourriture, appuyez sur Commander.",
-    },
-  },
-  de: {
-    greet: "Hallo! Ich bin dein StadiumSync-Assistent. Frag mich alles — Wegbeschreibung, Essen, Transport, Barrierefreiheit.",
-    replies: {
-      restroom: "Die nächste Toilette ist 40m hinter Abschnitt 118, links nach dem Fanshop. Gerade kurze Wartezeit.",
-      exit: "Dein schnellster Ausgang ist Tor 4 — aber stark ausgelastet (97%). Ich empfehle Bereich S, 6 Minuten mehr Fußweg, aber insgesamt schneller draußen.",
-      food: "Churro + Dip hat gerade die kürzeste Wartezeit (3 Min). Soll ich es zu deiner Bestellung hinzufügen?",
-      default: "Verstanden — ich leite dich weiter. Für Wegbeschreibung tippe auf Navigieren, für Essen auf Bestellen.",
-    },
-  },
-};
-
-const LANG_DETECT_MARKERS = {
-  es: [/\bdónde\b/, /\bbaño\b/, /\bsalida\b/, /\bcomida\b/, /\bcómo\b/, /\bhola\b/, /\bgracias\b/, /[ñ¿¡]/],
-  pt: [/\bbanheiro\b/, /\bsaída\b/, /\bcomida\b/, /\bonde\b/, /\bobrigad[oa]\b/, /[ãõç]/],
-  fr: [/\btoilettes?\b/, /\bsortie\b/, /\bnourriture\b/, /\boù\b/, /\bmerci\b/, /\bbonjour\b/, /[àâçèêëîïôûù]/],
-  de: [/\btoilette\b/, /\bausgang\b/, /\bessen\b/, /\bwo\b/, /\bdanke\b/, /\bhallo\b/, /[äöüß]/],
-  en: [/\bwhere\b/, /\brestroom\b/, /\bexit\b/, /\bfood\b/, /\bthanks?\b/, /\bhello\b/, /\bhi\b/],
-};
-
-// Best-effort language guess from free text — used to auto-switch the
-// assistant's fallback script bank when the fan types instead of tapping a
-// language pill. Returns null when no language scores a confident match.
-export function detectLang(text) {
-  const t = ` ${text.toLowerCase()} `;
-  let best = null;
-  let bestScore = 0;
-  for (const [lang, patterns] of Object.entries(LANG_DETECT_MARKERS)) {
-    const score = patterns.reduce((s, p) => s + (p.test(t) ? 1 : 0), 0);
-    if (score > bestScore) {
-      best = lang;
-      bestScore = score;
-    }
-  }
-  return best;
-}
-
-export function pickReply(lang, text) {
-  const t = text.toLowerCase();
-  const bank = ASSISTANT_SCRIPT[lang].replies;
-  if (t.includes("bath") || t.includes("restroom") || t.includes("baño") || t.includes("banheiro") || t.includes("toilette")) return bank.restroom;
-  if (t.includes("exit") || t.includes("salida") || t.includes("saída") || t.includes("sortie") || t.includes("ausgang") || t.includes("leave")) return bank.exit;
-  if (t.includes("food") || t.includes("snack") || t.includes("comida") || t.includes("nourriture") || t.includes("essen") || t.includes("hungry") || t.includes("eat")) return bank.food;
-  return bank.default;
-}
-
-export { densityColor };
 
 /* -------------------------------- MASCOTS ----------------------------------
 Flat vector character avatars. Used at onboarding, in the header, and inside
@@ -246,6 +159,9 @@ function Onboarding({ onDone }) {
 
   return (
     <div className="min-h-screen w-full bg-[#0B140F] flex items-center justify-center px-4 py-10 relative overflow-hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <a href="#onboarding-main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-[#3ED07A] focus:text-[#0B140F] focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">
+        Skip to role selection
+      </a>
       <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-[#3ED07A]/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[360px] h-[360px] rounded-full bg-[#FFC24B]/10 blur-3xl pointer-events-none" />
 
@@ -254,14 +170,14 @@ function Onboarding({ onDone }) {
           <div className="w-14 h-14 rounded-2xl bg-[#3ED07A] flex items-center justify-center mb-4 shadow-lg shadow-[#3ED07A]/20">
             <ShieldCheck size={26} className="text-[#0B140F]" />
           </div>
-          <div className="text-[#F3F3EF] font-bold text-2xl tracking-tight">StadiumSync</div>
+          <h1 className="text-[#F3F3EF] font-bold text-2xl tracking-tight">StadiumSync</h1>
           <div className="text-[#8FA69B] text-sm mt-1.5">World Cup 2026 · Estadio Azteca</div>
           <div className="flex items-center gap-1.5 mt-3 text-[#3ED07A] text-xs font-medium">
             <Sparkles size={13} /> AI-powered attendee &amp; ops companion
           </div>
         </div>
 
-        <Card className="p-5">
+        <Card className="p-5" id="onboarding-main">
           <div className="grid grid-cols-2 gap-2 mb-5 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5" role="tablist" aria-label="Choose your role">
             {[["fan", "Attendee"], ["staff", "Operations"]].map(([id, label]) => (
               <button
@@ -381,6 +297,23 @@ function Onboarding({ onDone }) {
 
 /* --------------------------------- FAN VIEW --------------------------------- */
 
+// Memoized so toggling step-free/audio state in NavigateTab (unrelated to
+// zone data) doesn't re-render every zone bar on every keystroke of state.
+const ZoneRow = memo(function ZoneRow({ name, density }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-28 text-sm text-[#F3F3EF]">{name}</div>
+      <div className="flex-1 h-2 rounded-full bg-[#16281F] overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${density}%`, background: densityColor(density) }}
+        />
+      </div>
+      <div className="w-9 text-right text-xs text-[#8FA69B]">{density}%</div>
+    </div>
+  );
+});
+
 function NavigateTab({ profile }) {
   const AvatarComp = AVATARS[profile.avatar].Comp;
   const [stepFree, setStepFree] = useState(true);
@@ -460,16 +393,7 @@ function NavigateTab({ profile }) {
         <SectionLabel>Zone crowd levels</SectionLabel>
         <div className="space-y-3">
           {ZONES.map((z) => (
-            <div key={z.name} className="flex items-center gap-3">
-              <div className="w-28 text-sm text-[#F3F3EF]">{z.name}</div>
-              <div className="flex-1 h-2 rounded-full bg-[#16281F] overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${z.density}%`, background: densityColor(z.density) }}
-                />
-              </div>
-              <div className="w-9 text-right text-xs text-[#8FA69B]">{z.density}%</div>
-            </div>
+            <ZoneRow key={z.name} name={z.name} density={z.density} />
           ))}
         </div>
         <div className="mt-4 flex items-start gap-2 bg-[#FFC24B]/10 border border-[#FFC24B]/25 rounded-xl p-3">
@@ -511,15 +435,42 @@ function NavigateTab({ profile }) {
   );
 }
 
+// Memoized so adjusting one item's quantity only re-renders that row, not
+// the full SNACKS list — add/sub are stable (useCallback, no dependency on
+// cart) so this bails out cleanly via React.memo's shallow prop comparison.
+const SnackRow = memo(function SnackRow({ snack, qty, onAdd, onSub }) {
+  return (
+    <Card className="p-4 flex items-center justify-between">
+      <div className="flex-1 min-w-0">
+        <div className="text-[#F3F3EF] font-medium">{snack.name}</div>
+        <div className="text-[#8FA69B] text-xs mt-0.5">{snack.vendor} · ${snack.price.toFixed(2)}</div>
+        <div className="flex items-center gap-1 mt-1.5">
+          <Clock size={11} className="text-[#8FA69B]" aria-hidden="true" />
+          <span className="text-[11px] text-[#8FA69B]">{snack.eta} wait</span>
+        </div>
+      </div>
+      {qty ? (
+        <div className="flex items-center gap-2.5 bg-[#16281F] rounded-full px-1 py-1 shrink-0">
+          <button onClick={() => onSub(snack.id)} aria-label={`Remove one ${snack.name}`} className="w-7 h-7 rounded-full bg-[#223328] flex items-center justify-center text-[#F3F3EF] focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"><Minus size={13} aria-hidden="true" /></button>
+          <span className="text-[#F3F3EF] text-sm w-4 text-center" aria-live="polite">{qty}</span>
+          <button onClick={() => onAdd(snack.id)} aria-label={`Add one more ${snack.name}`} className="w-7 h-7 rounded-full bg-[#3ED07A] flex items-center justify-center text-[#0B140F] focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"><Plus size={13} aria-hidden="true" /></button>
+        </div>
+      ) : (
+        <button onClick={() => onAdd(snack.id)} aria-label={`Add ${snack.name} to order`} className="shrink-0 px-4 py-2 rounded-full bg-[#3ED07A] text-[#0B140F] text-sm font-semibold focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none">Add</button>
+      )}
+    </Card>
+  );
+});
+
 function OrderTab() {
   const [cart, setCart] = useState({});
   const [placedOrder, setPlacedOrder] = useState(null);
-  const add = (id) => setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 }));
-  const sub = (id) => setCart((c) => {
+  const add = useCallback((id) => setCart((c) => ({ ...c, [id]: (c[id] || 0) + 1 })), []);
+  const sub = useCallback((id) => setCart((c) => {
     const n = { ...c };
     if (n[id] > 1) n[id] -= 1; else delete n[id];
     return n;
-  });
+  }), []);
   const total = Object.entries(cart).reduce((s, [id, q]) => s + SNACKS.find((x) => x.id == id).price * q, 0);
   const count = Object.values(cart).reduce((a, b) => a + b, 0);
 
@@ -535,7 +486,7 @@ function OrderTab() {
   return (
     <div className="space-y-4 pb-20">
       {placedOrder && (
-        <Card className="p-4 flex items-start gap-3 bg-[#3ED07A]/10 border-[#3ED07A]/30">
+        <Card className="p-4 flex items-start gap-3 bg-[#3ED07A]/10 border-[#3ED07A]/30" role="status">
           <CheckCircle2 size={18} className="text-[#3ED07A] shrink-0 mt-0.5" aria-hidden="true" />
           <div className="flex-1 text-sm text-[#F3F3EF] leading-relaxed">
             Order placed — ${placedOrder.total.toFixed(2)} charged. Arriving at Section 118, Seat 14 in ~{placedOrder.eta} min.
@@ -553,25 +504,7 @@ function OrderTab() {
 
       <div className="space-y-3">
         {SNACKS.map((s) => (
-          <Card key={s.id} className="p-4 flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="text-[#F3F3EF] font-medium">{s.name}</div>
-              <div className="text-[#8FA69B] text-xs mt-0.5">{s.vendor} · ${s.price.toFixed(2)}</div>
-              <div className="flex items-center gap-1 mt-1.5">
-                <Clock size={11} className="text-[#8FA69B]" aria-hidden="true" />
-                <span className="text-[11px] text-[#8FA69B]">{s.eta} wait</span>
-              </div>
-            </div>
-            {cart[s.id] ? (
-              <div className="flex items-center gap-2.5 bg-[#16281F] rounded-full px-1 py-1 shrink-0">
-                <button onClick={() => sub(s.id)} aria-label={`Remove one ${s.name}`} className="w-7 h-7 rounded-full bg-[#223328] flex items-center justify-center text-[#F3F3EF] focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"><Minus size={13} aria-hidden="true" /></button>
-                <span className="text-[#F3F3EF] text-sm w-4 text-center" aria-live="polite">{cart[s.id]}</span>
-                <button onClick={() => add(s.id)} aria-label={`Add one more ${s.name}`} className="w-7 h-7 rounded-full bg-[#3ED07A] flex items-center justify-center text-[#0B140F] focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none"><Plus size={13} aria-hidden="true" /></button>
-              </div>
-            ) : (
-              <button onClick={() => add(s.id)} aria-label={`Add ${s.name} to order`} className="shrink-0 px-4 py-2 rounded-full bg-[#3ED07A] text-[#0B140F] text-sm font-semibold focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none">Add</button>
-            )}
-          </Card>
+          <SnackRow key={s.id} snack={s} qty={cart[s.id]} onAdd={add} onSub={sub} />
         ))}
       </div>
 
@@ -657,7 +590,7 @@ function AssistantTab({ profile }) {
       </div>
       <p className="text-[10px] text-[#8FA69B] mb-3 -mt-1.5">Auto-detects the language you type in — tap a pill to switch manually.</p>
 
-      <Card className="flex-1 p-4 overflow-y-auto flex flex-col gap-3">
+      <Card className="flex-1 p-4 overflow-y-auto flex flex-col gap-3" role="log" aria-live="polite" aria-label="Conversation with the StadiumSync assistant">
         {messages.map((m, i) => (
           <div key={i} className={`flex items-end gap-2 ${m.from === "bot" ? "self-start flex-row" : "self-end flex-row-reverse"}`}>
             {m.from === "bot" ? (
@@ -707,9 +640,30 @@ function AssistantTab({ profile }) {
   );
 }
 
+// Memoized so selecting one route only re-renders the row whose selected
+// state actually flipped, not the whole route list.
+const RouteRow = memo(function RouteRow({ route, isSelected, onToggle }) {
+  return (
+    <button
+      onClick={() => onToggle(route.id)}
+      aria-pressed={isSelected}
+      className={`w-full flex items-center justify-between rounded-xl p-3.5 text-left border transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${
+        isSelected ? "bg-[#1B3326] border-[#3ED07A]/50" : "bg-[#16281F] border-transparent hover:border-[#2E4A3B]"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <route.icon size={17} className="text-[#3ED07A]" aria-hidden="true" />
+        <span className="text-[#F3F3EF] text-sm">{route.name}</span>
+      </div>
+      <Pill tone={route.tone}>{route.eta}</Pill>
+    </button>
+  );
+});
+
 function TransportTab() {
   const [selected, setSelected] = useState(null);
   const active = TRANSPORT_ROUTES.find((r) => r.id === selected);
+  const toggleRoute = useCallback((id) => setSelected((s) => (s === id ? null : id)), []);
 
   return (
     <div className="space-y-4">
@@ -751,20 +705,7 @@ function TransportTab() {
         <SectionLabel>Get home</SectionLabel>
         <div className="space-y-3">
           {TRANSPORT_ROUTES.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setSelected((s) => (s === r.id ? null : r.id))}
-              aria-pressed={selected === r.id}
-              className={`w-full flex items-center justify-between rounded-xl p-3.5 text-left border transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${
-                selected === r.id ? "bg-[#1B3326] border-[#3ED07A]/50" : "bg-[#16281F] border-transparent hover:border-[#2E4A3B]"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <r.icon size={17} className="text-[#3ED07A]" aria-hidden="true" />
-                <span className="text-[#F3F3EF] text-sm">{r.name}</span>
-              </div>
-              <Pill tone={r.tone}>{r.eta}</Pill>
-            </button>
+            <RouteRow key={r.id} route={r} isSelected={selected === r.id} onToggle={toggleRoute} />
           ))}
         </div>
       </Card>
@@ -840,6 +781,9 @@ export default function StadiumSync() {
 
   return (
     <div className="min-h-screen w-full bg-[#0B140F] flex items-start justify-center py-8 px-4" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:bg-[#3ED07A] focus:text-[#0B140F] focus:px-4 focus:py-2 focus:rounded-full focus:text-sm focus:font-semibold">
+        Skip to main content
+      </a>
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
@@ -848,9 +792,9 @@ export default function StadiumSync() {
               <HeaderAvatar size={44} />
             </div>
             <div>
-              <div className="text-[#F3F3EF] font-bold text-[15px] leading-none tracking-tight">
+              <h1 className="text-[#F3F3EF] font-bold text-[15px] leading-none tracking-tight">
                 {role === "fan" ? `Hey, ${profile.name}` : "Ops Console"}
-              </div>
+              </h1>
               <div className="text-[#8FA69B] text-[11px] mt-1">World Cup 2026 · Estadio Azteca</div>
             </div>
           </div>
@@ -887,9 +831,11 @@ export default function StadiumSync() {
         </div>
 
         {/* Active panel */}
-        <Suspense fallback={<div className="text-center text-[#8FA69B] text-sm py-10" role="status">Loading…</div>}>
-          <ActiveComponent profile={profile} />
-        </Suspense>
+        <main id="main-content">
+          <Suspense fallback={<div className="text-center text-[#8FA69B] text-sm py-10" role="status">Loading…</div>}>
+            <ActiveComponent profile={profile} />
+          </Suspense>
+        </main>
 
         <div className="mt-6 flex items-center justify-center gap-1.5 text-[10px] text-[#8FA69B]">
           <Users size={11} /> Attendee actions feed the Ops layer in real time — same AI, every role.
