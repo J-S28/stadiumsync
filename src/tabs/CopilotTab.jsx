@@ -11,6 +11,12 @@ import { hapticDispatch } from "../lib/haptics.js";
 // to the same live data instead of a hardcoded zone name.
 const SPIKE_THRESHOLD = 90;
 
+// ZONES is a static, module-level constant — the most-congested zone never
+// changes for the lifetime of the app, so this is computed once here
+// rather than re-reduced on every render of the component below.
+const flaggedZone = ZONES.reduce((max, z) => (z.density > max.density ? z : max), ZONES[0]);
+const isSpiking = flaggedZone.density >= SPIKE_THRESHOLD;
+
 function fallbackBrief(zoneName) {
   return `Redirect to ${zoneName} — crowd spike, assist with flow control. ETA 2 min.`;
 }
@@ -27,9 +33,6 @@ export default function CopilotTab() {
   const endRef = useRef(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
-
-  const flaggedZone = ZONES.reduce((max, z) => (z.density > max.density ? z : max), ZONES[0]);
-  const isSpiking = flaggedZone.density >= SPIKE_THRESHOLD;
 
   const send = async () => {
     if (!input.trim() || loading) return;

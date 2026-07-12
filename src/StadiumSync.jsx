@@ -7,6 +7,7 @@ import {
   Headset, Siren, DoorOpen, Clapperboard, Ear, MapPinned,
 } from "lucide-react";
 import { Card, SectionLabel, Pill } from "./shared/ui.jsx";
+import { TabErrorBoundary } from "./shared/ErrorBoundary.jsx";
 import { densityColor, ZONES, AVATARS } from "./shared/data.js";
 import { StaffAvatar } from "./shared/avatars.jsx";
 import { STAFF_PIN, TICKET_FORMAT } from "./lib/assistant.js";
@@ -78,7 +79,7 @@ function Onboarding({ onDone }) {
       <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-[#3ED07A]/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[360px] h-[360px] rounded-full bg-[#FFC24B]/10 blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-sm relative">
+      <main className="w-full max-w-sm relative">
         <div className="flex flex-col items-center text-center mb-7">
           <div className="w-14 h-14 rounded-2xl bg-[#3ED07A] flex items-center justify-center mb-4 shadow-lg shadow-[#3ED07A]/20">
             <ShieldCheck size={26} className="text-[#0B140F]" />
@@ -203,7 +204,7 @@ function Onboarding({ onDone }) {
         <div className="mt-5 flex items-center justify-center gap-1.5 text-[10px] text-[#8FA69B]">
           <Users size={11} /> Attendee actions feed the Ops layer in real time — same AI, every role.
         </div>
-      </div>
+      </main>
     </div>
   );
 }
@@ -465,9 +466,11 @@ export default function StadiumSync() {
 
         {/* Active panel */}
         <main id="main-content">
-          <Suspense fallback={<div className="text-center text-[#8FA69B] text-sm py-10" role="status">Loading…</div>}>
-            <ActiveComponent profile={profile} transitDelayed={transitDelayed} setTransitDelayed={setTransitDelayed} />
-          </Suspense>
+          <TabErrorBoundary resetKey={activeId}>
+            <Suspense fallback={<div className="text-center text-[#8FA69B] text-sm py-10" role="status">Loading…</div>}>
+              <ActiveComponent profile={profile} transitDelayed={transitDelayed} setTransitDelayed={setTransitDelayed} />
+            </Suspense>
+          </TabErrorBoundary>
         </main>
 
         <div className="mt-6 flex items-center justify-center gap-1.5 text-[10px] text-[#8FA69B]">

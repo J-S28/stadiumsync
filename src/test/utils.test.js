@@ -81,12 +81,23 @@ describe('TICKET_FORMAT', () => {
     expect(TICKET_FORMAT.test('abc')).toBe(false);
   });
 
+  it('is exact at the 6-character boundary — 5 chars rejects, 6 accepts', () => {
+    expect(TICKET_FORMAT.test('abcde')).toBe(false);
+    expect(TICKET_FORMAT.test('abcdef')).toBe(true);
+  });
+
   it('rejects empty input', () => {
     expect(TICKET_FORMAT.test('')).toBe(false);
   });
 
   it('rejects characters outside letters/digits/dashes', () => {
     expect(TICKET_FORMAT.test('wc26 118014')).toBe(false);
+    expect(TICKET_FORMAT.test('wc26_118014')).toBe(false);
+    expect(TICKET_FORMAT.test('wc26@118014')).toBe(false);
+  });
+
+  it('has no upper bound on length', () => {
+    expect(TICKET_FORMAT.test('WC26-118014-EXTRA-LONG-CONFIRMATION-CODE')).toBe(true);
   });
 });
 

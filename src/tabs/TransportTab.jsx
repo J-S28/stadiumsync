@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import { Bus, Navigation, MapPin, AlertTriangle, Radio, CheckCircle2 } from "lucide-react";
 import { Card, SectionLabel, Pill, AIBadge } from "../shared/ui.jsx";
 import { hapticTick } from "../lib/haptics.js";
@@ -42,10 +42,16 @@ export default function TransportTab({ transitDelayed }) {
   const [selected, setSelected] = useState(null);
   // The Ops Console's Egress Optimizer flips this shared flag — when it's
   // on, Metro Blue Line's own entry reflects the delay directly instead of
-  // this tab having its own separate idea of what's happening.
-  const routes = transitDelayed
-    ? TRANSPORT_ROUTES.map((r) => (r.id === "metro" ? { ...r, eta: "delayed 12 min", tone: "alert" } : r))
-    : TRANSPORT_ROUTES;
+  // this tab having its own separate idea of what's happening. Memoized on
+  // transitDelayed alone (not recomputed when only `selected` changes) so
+  // the array/object identities stay stable and RouteRow's memo can still
+  // bail out for the routes that didn't actually change.
+  const routes = useMemo(
+    () => (transitDelayed
+      ? TRANSPORT_ROUTES.map((r) => (r.id === "metro" ? { ...r, eta: "delayed 12 min", tone: "alert" } : r))
+      : TRANSPORT_ROUTES),
+    [transitDelayed],
+  );
   const active = routes.find((r) => r.id === selected);
   const toggleRoute = useCallback((id) => setSelected((s) => (s === id ? null : id)), []);
 

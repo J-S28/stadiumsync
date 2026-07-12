@@ -101,6 +101,8 @@ Every Claude call in the app goes through one Vercel serverless function (`api/a
 
 Every mode falls back to a scripted offline response (`src/lib/{assistant,protocol,incident,commentary,egress}.js`) if the API is unreachable — no key configured, offline, or rate-limited — so the demo never breaks mid-presentation.
 
+**Structured prompts.** Every system prompt is written with XML-tag sections (`<role>`, `<context>`/`<venue_state>`/`<protocol_excerpt>`, `<constraints>`, `<task>`, `<output_format>`) rather than a single paragraph of prose. This isn't cosmetic — Claude models are specifically trained to track section boundaries marked this way, which is Anthropic's documented approach for keeping a model from blending instructions with the context it's reasoning over, or drifting off the requested reply shape (e.g. the strict `Alert: / Recommended deployment:` and `WAYFINDING: / SIGNAGE:` formats several modes parse programmatically).
+
 ## Architecture
 
 ```
@@ -149,14 +151,14 @@ The dev server serves the frontend only — the `/api/assistant` route needs the
 ```bash
 npm test              # unit + component tests (Vitest + React Testing Library)
 npm run test:watch    # same, in watch mode
-npm run test:coverage # with a coverage report + enforced thresholds (currently ~98% statements)
+npm run test:coverage # with a coverage report + enforced thresholds (currently ~97% statements)
 npm run test:e2e      # Playwright end-to-end + axe-core accessibility scans
 ```
 
-109 Vitest tests + 29 Playwright E2E tests = 138 total, all passing:
+114 Vitest tests + 29 Playwright E2E tests = 143 total, all passing:
 
-- **Unit tests** (`src/test/utils.test.js` — 20, `src/test/lib.test.js` — 21) cover the pure logic: language auto-detection, keyword-based scripted replies (attendee + protocol), zone density color thresholds, the ticket-ID format check, incident/comms/egress response parsing, the offline fallback banks, the `callAssistant` client (including its own empty-reply and non-ok-response branches), and the haptics wrapper (including graceful no-op when the Vibration API is unsupported).
-- **Component tests** (`src/test/StadiumSync.test.jsx` — 42) drive the app through React Testing Library: onboarding gates, the order → checkout → confirmation flow, transport route selection, the Ops Console's actionable AI suggestions, the accessibility toggles, and every one of the six new modules — Copilot, Incident Command, Egress, Match Hub, Access+, Fan Zone — covering the offline-fallback path, the live-API-success path, and edge interactions (Enter-key submission, replay/stop toggles, dismissing confirmations).
+- **Unit tests** (`src/test/utils.test.js` — 22, `src/test/lib.test.js` — 21) cover the pure logic: language auto-detection, keyword-based scripted replies (attendee + protocol), zone density color thresholds, the ticket-ID format check (including the exact 5-vs-6-character boundary and an unbounded-length case), incident/comms/egress response parsing, the offline fallback banks, the `callAssistant` client (including its own empty-reply and non-ok-response branches), and the haptics wrapper (including graceful no-op when the Vibration API is unsupported).
+- **Component tests** (`src/test/StadiumSync.test.jsx` — 42, `src/test/ErrorBoundary.test.jsx` — 3) drive the app through React Testing Library: onboarding gates, the order → checkout → confirmation flow, transport route selection, the Ops Console's actionable AI suggestions, the accessibility toggles, every module — Copilot, Incident Command, Egress, Match Hub, Access+, Fan Zone — covering the offline-fallback path, the live-API-success path, and edge interactions (Enter-key submission, replay/stop toggles, dismissing confirmations) — and the `TabErrorBoundary` itself (renders a fallback instead of crashing, recovers when the active tab changes).
 - **API tests** (`api/assistant.test.js` — 26) mock the Anthropic SDK to cover method/validation errors, the success path, auth/rate-limit/upstream-error handling, the in-memory rate limiter (including its cap-triggered sweep of stale entries), that each of the eight `mode` values selects the correct system prompt, and IP-resolution fallbacks (`x-forwarded-for` → `socket.remoteAddress` → `"unknown"`) — with no real network calls.
 - **E2E tests** (`e2e/*.spec.js` — 29) run the built app in a real headless browser: the full attendee and operations journeys including all six new modules, plus five `@axe-core/playwright` scans (landing page, attendee Navigate tab, Ops Console, Match Hub, Incident Command) that currently report **zero WCAG 2.0/2.1 A/AA violations**, and a keyboard-only walkthrough of onboarding.
 
@@ -171,6 +173,12 @@ CI runs all of the above — lint, unit tests with coverage, build, and E2E — 
 - **Memoized list rows.** `SnackRow` (Order), `ZoneRow` (Navigate), and `RouteRow` (Transport) are wrapped in `React.memo` with stable (`useCallback`) handlers, so incrementing one cart item or toggling step-free routing re-renders only the row that changed, not the whole list.
 - **No dead weight.** Vite/CRA-scaffolding leftovers (`App.css`, unused image assets, an unreferenced `icons.svg`) were removed after confirming via grep that nothing imported them.
 - **Bounded server-side memory.** The assistant API's rate-limit `Map` tracks one entry per client key — on a long-warm serverless instance that would otherwise grow forever, one stale entry per unique caller it's ever seen. It now sweeps expired entries once the map exceeds a cap instead of paying that cost on every request.
+- **Memoized derived values, not just components.** `TransportTab`'s route list is wrapped in `useMemo` keyed on the Egress delay flag alone, so selecting a route doesn't rebuild the array (and break `RouteRow`'s own memoization) on every click. `CopilotTab`'s "most congested zone" is computed once at module scope, since it's derived purely from a static import that never changes — not recomputed on every keystroke in the protocol chat.
+- **Real Lighthouse numbers**, run against the live deployment: **Performance 99 · Accessibility 98 → 100 · Best Practices 100 · SEO 100**, 0 cumulative layout shift, ~10ms total blocking time. The one accessibility point Lighthouse initially flagged — the onboarding/landing screen had no `<main>` landmark, unlike the post-onboarding app shell — is fixed.
+
+## Reliability
+
+- **Error boundaries.** `TabErrorBoundary` (`src/shared/ErrorBoundary.jsx`) wraps the active tab's `Suspense` boundary. If a bug in one module throws during render, that tab shows a contained "something went wrong" message instead of white-screening the whole app — and it resets automatically the moment the user switches tabs, so a crash never permanently locks out the rest of the session.
 
 ## Accessibility
 
@@ -220,7 +228,8 @@ stadiumsync/
 │   ├── shared/
 │   │   ├── data.js           # pure data + densityColor + AVATARS lookup, shared with the lazy tabs
 │   │   ├── ui.jsx             # Card/Pill/SectionLabel/AIBadge — presentational only
-│   │   └── avatars.jsx        # mascot SVG components (needed by StadiumSync.jsx and the lazy AssistantTab)
+│   │   ├── avatars.jsx        # mascot SVG components (needed by StadiumSync.jsx and the lazy AssistantTab)
+│   │   └── ErrorBoundary.jsx  # TabErrorBoundary — contains a crash to the active tab, not the whole app
 │   ├── lib/
 │   │   ├── assistant.js      # attendee scripted reply bank + language detection
 │   │   ├── protocol.js       # Volunteer Copilot offline fallback bank
@@ -247,7 +256,8 @@ stadiumsync/
 │   │   ├── setup.js          # jsdom polyfills (speechSynthesis, ResizeObserver, fetch, vibrate)
 │   │   ├── utils.test.js     # pure-function unit tests
 │   │   ├── lib.test.js       # tests for src/lib/* (protocol, incident, commentary, haptics, callAssistant)
-│   │   └── StadiumSync.test.jsx  # component/integration tests, all tabs
+│   │   ├── StadiumSync.test.jsx  # component/integration tests, all tabs
+│   │   └── ErrorBoundary.test.jsx  # TabErrorBoundary fallback + recovery
 │   ├── App.jsx
 │   └── main.jsx
 ├── playwright.config.js
