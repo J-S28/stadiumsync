@@ -5,6 +5,8 @@ import { callAssistant } from "../lib/callAssistant.js";
 import { COMMENTARY_FALLBACK } from "../lib/commentary.js";
 
 const MOMENTS = ["Corner kick won", "Near miss on goal", "Great tackle to break up an attack", "Goal!"];
+// Hoisted so this tuple isn't reallocated on every render.
+const COMMENTARY_STYLES = [["tactical", "Tactical"], ["biased", "Team-biased"]];
 
 export default function MatchHubTab() {
   const [style, setStyle] = useState("tactical");
@@ -61,7 +63,7 @@ export default function MatchHubTab() {
           <AIBadge label="AI commentary" />
         </div>
         <div className="grid grid-cols-2 gap-2 mb-3 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5" role="tablist" aria-label="Commentary style">
-          {[["tactical", "Tactical"], ["biased", "Team-biased"]].map(([id, label]) => (
+          {COMMENTARY_STYLES.map(([id, label]) => (
             <button
               key={id}
               onClick={() => setStyle(id)}

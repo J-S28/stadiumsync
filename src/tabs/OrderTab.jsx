@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import { Clock, Plus, Minus, Zap, Package, CheckCircle2, X } from "lucide-react";
 import { Card, AIBadge } from "../shared/ui.jsx";
 import { hapticTick } from "../lib/haptics.js";
@@ -9,6 +9,9 @@ const SNACKS = [
   { id: 3, name: "Cerveza (16oz)", price: 11, vendor: "Cerveza Bar", eta: "22 min" },
   { id: 4, name: "Churro + Dip", price: 6.5, vendor: "Ice Cream Co.", eta: "3 min" },
 ];
+// O(1) id -> snack lookup, used instead of re-scanning SNACKS with .find()
+// every time the cart total/ETA is derived.
+const SNACKS_BY_ID = new Map(SNACKS.map((s) => [s.id, s]));
 
 // Memoized so adjusting one item's quantity only re-renders that row, not
 // the full SNACKS list — add/sub are stable (useCallback, no dependency on
@@ -46,12 +49,15 @@ export default function OrderTab() {
     if (n[id] > 1) n[id] -= 1; else delete n[id];
     return n;
   }), []);
-  const total = Object.entries(cart).reduce((s, [id, q]) => s + SNACKS.find((x) => x.id == id).price * q, 0);
-  const count = Object.values(cart).reduce((a, b) => a + b, 0);
+  const total = useMemo(
+    () => Object.entries(cart).reduce((s, [id, q]) => s + SNACKS_BY_ID.get(Number(id)).price * q, 0),
+    [cart],
+  );
+  const count = useMemo(() => Object.values(cart).reduce((a, b) => a + b, 0), [cart]);
 
   const placeOrder = () => {
     const maxEta = Object.keys(cart).reduce((max, id) => {
-      const mins = parseInt(SNACKS.find((x) => x.id == id).eta, 10) || 0;
+      const mins = parseInt(SNACKS_BY_ID.get(Number(id)).eta, 10) || 0;
       return Math.max(max, mins);
     }, 0);
     setPlacedOrder({ total, eta: maxEta });

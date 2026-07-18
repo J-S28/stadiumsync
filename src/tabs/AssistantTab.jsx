@@ -5,6 +5,9 @@ import { AVATARS } from "../shared/data.js";
 import { BotAvatar } from "../shared/avatars.jsx";
 import { ASSISTANT_SCRIPT, detectLang, pickReply } from "../lib/assistant.js";
 
+// Hoisted so this list isn't reallocated on every render.
+const LANGS = [["en", "EN", "English"], ["es", "ES", "Spanish"], ["pt", "PT", "Portuguese"], ["fr", "FR", "French"], ["de", "DE", "German"]];
+
 export default function AssistantTab({ profile }) {
   const [lang, setLang] = useState("en");
   const [messages, setMessages] = useState([{ from: "bot", text: ASSISTANT_SCRIPT.en.greet }]);
@@ -57,7 +60,7 @@ export default function AssistantTab({ profile }) {
   return (
     <div className="flex flex-col h-[520px]">
       <div className="flex items-center gap-2 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
-        {[["en", "EN", "English"], ["es", "ES", "Spanish"], ["pt", "PT", "Portuguese"], ["fr", "FR", "French"], ["de", "DE", "German"]].map(([code, label, full]) => (
+        {LANGS.map(([code, label, full]) => (
           <button
             key={code}
             onClick={() => selectLang(code)}

@@ -46,6 +46,9 @@ Palette:
 
 /* ------------------------------ ONBOARDING ---------------------------------- */
 
+// Hoisted so this tuple isn't reallocated on every Onboarding render.
+const ROLE_TABS = [["fan", "Attendee"], ["staff", "Operations"]];
+
 function Onboarding({ onDone }) {
   const [tab, setTab] = useState("fan");
   const [avatar, setAvatar] = useState("boy");
@@ -93,7 +96,7 @@ function Onboarding({ onDone }) {
 
         <Card className="p-5" id="onboarding-main">
           <div className="grid grid-cols-2 gap-2 mb-5 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5" role="tablist" aria-label="Choose your role">
-            {[["fan", "Attendee"], ["staff", "Operations"]].map(([id, label]) => (
+            {ROLE_TABS.map(([id, label]) => (
               <button
                 key={id}
                 onClick={() => setTab(id)}
