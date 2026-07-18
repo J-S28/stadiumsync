@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { DoorOpen, TrafficCone, CheckCircle2, MonitorPlay } from "lucide-react";
-import { Card, SectionLabel, Pill, AIBadge } from "../shared/ui.jsx";
+import { Card, SectionLabel, SectionHeader, Pill, AIBadge } from "../shared/ui.jsx";
 import { callAssistant } from "../lib/callAssistant.js";
 import { EGRESS_FALLBACK, parseEgressUpdate } from "../lib/egress.js";
 
@@ -36,10 +36,7 @@ export default function EgressTab({ transitDelayed, setTransitDelayed }) {
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>Transit-linked pacing</SectionLabel>
-          <AIBadge label="AI pacing" />
-        </div>
+        <SectionHeader label="Transit-linked pacing" badge={<AIBadge label="AI pacing" />} />
         <div className="flex items-center justify-between mb-4">
           <div className="text-sm text-[#F3F3EF]">Metro Blue Line status</div>
           <Pill tone={transitDelayed ? "danger" : "live"}>{transitDelayed ? "12 min delay" : "On time"}</Pill>

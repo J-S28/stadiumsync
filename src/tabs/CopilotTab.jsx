@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Users, CheckCircle2 } from "lucide-react";
-import { Card, SectionLabel, AIBadge } from "../shared/ui.jsx";
+import { Card, SectionHeader, AIBadge } from "../shared/ui.jsx";
 import { ZONES } from "../shared/data.js";
 import { callAssistant } from "../lib/callAssistant.js";
 import { pickProtocolReply } from "../lib/protocol.js";
@@ -75,10 +75,7 @@ export default function CopilotTab() {
   return (
     <div className="space-y-4">
       <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>Protocol assistant</SectionLabel>
-          <AIBadge />
-        </div>
+        <SectionHeader label="Protocol assistant" badge={<AIBadge />} />
         <div className="flex flex-col h-64">
           <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 pr-1" role="log" aria-live="polite" aria-label="Conversation with the protocol assistant">
             {messages.map((m, i) => (
@@ -107,10 +104,7 @@ export default function CopilotTab() {
       </Card>
 
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>Dynamic re-routing</SectionLabel>
-          <AIBadge label="AI brief" />
-        </div>
+        <SectionHeader label="Dynamic re-routing" badge={<AIBadge label="AI brief" />} />
         {isSpiking ? (
           <div className="flex items-start gap-2.5 bg-[#FFC24B]/10 border border-[#FFC24B]/25 rounded-xl p-3.5">
             <Users size={16} className="text-[#FFC24B] mt-0.5 shrink-0" aria-hidden="true" />

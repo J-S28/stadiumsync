@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Clapperboard, Volume2, ScanEye } from "lucide-react";
-import { Card, SectionLabel, Pill, AIBadge } from "../shared/ui.jsx";
+import { Card, SectionHeader, Pill, AIBadge } from "../shared/ui.jsx";
 import { callAssistant } from "../lib/callAssistant.js";
 import { COMMENTARY_FALLBACK } from "../lib/commentary.js";
 import { useSpeechSynthesis } from "../lib/speech.js";
@@ -48,10 +48,7 @@ export default function MatchHubTab() {
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>AI commentary feed</SectionLabel>
-          <AIBadge label="AI commentary" />
-        </div>
+        <SectionHeader label="AI commentary feed" badge={<AIBadge label="AI commentary" />} />
         <div className="grid grid-cols-2 gap-2 mb-3 bg-[#0B140F] border border-[#223328] rounded-2xl p-1.5" role="tablist" aria-label="Commentary style">
           {COMMENTARY_STYLES.map(([id, label]) => (
             <button
@@ -110,10 +107,7 @@ export default function MatchHubTab() {
       </Card>
 
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>AR match stats</SectionLabel>
-          <Pill tone="alert">Concept preview</Pill>
-        </div>
+        <SectionHeader label="AR match stats" badge={<Pill tone="alert">Concept preview</Pill>} />
         <div className="relative rounded-xl overflow-hidden bg-[#0B140F] h-40 flex items-center justify-center border border-[#223328]">
           {/* Decorative heat-map blobs standing in for a real positional heat map */}
           <div className="absolute inset-0" aria-hidden="true">

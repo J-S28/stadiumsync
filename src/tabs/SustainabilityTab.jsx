@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Leaf, CheckCircle2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { Card, SectionLabel, AIBadge } from "../shared/ui.jsx";
+import { Card, SectionLabel, SectionHeader, AIBadge } from "../shared/ui.jsx";
 import { SUSTAIN_PIE, PIE_COLORS } from "../shared/data.js";
 import { hapticDispatch } from "../lib/haptics.js";
 
@@ -37,10 +37,7 @@ export default function SustainabilityTab() {
         </div>
       </Card>
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>AI dispatch suggestion</SectionLabel>
-          <AIBadge />
-        </div>
+        <SectionHeader label="AI dispatch suggestion" badge={<AIBadge />} />
         <div className="flex items-start gap-2.5">
           <Leaf size={17} className="text-[#3ED07A] mt-0.5 shrink-0" aria-hidden="true" />
           <div className="text-sm text-[#F3F3EF] leading-relaxed flex-1">

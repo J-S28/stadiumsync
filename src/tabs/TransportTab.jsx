@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, memo } from "react";
 import { Bus, Navigation, MapPin, AlertTriangle, Radio, CheckCircle2 } from "lucide-react";
-import { Card, SectionLabel, Pill, AIBadge } from "../shared/ui.jsx";
+import { Card, SectionLabel, SectionHeader, Pill, AIBadge } from "../shared/ui.jsx";
 import { hapticTick } from "../lib/haptics.js";
 
 const TRANSPORT_ROUTES = [
@@ -109,10 +109,7 @@ export default function TransportTab({ transitDelayed }) {
         </div>
       </Card>
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>AI suggestion</SectionLabel>
-          <AIBadge />
-        </div>
+        <SectionHeader label="AI suggestion" badge={<AIBadge />} />
         <p className="text-sm text-[#F3F3EF] leading-relaxed mb-3">
           Post-match surge expected at Metro Blue Line in ~25 min. Leaving via Concourse S and taking Shuttle Line C now avoids the crowd and saves you roughly 15 minutes.
         </p>

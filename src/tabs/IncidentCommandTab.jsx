@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Siren, Megaphone, Radio } from "lucide-react";
-import { Card, SectionLabel, AIBadge, Pill } from "../shared/ui.jsx";
+import { Card, SectionHeader, AIBadge, Pill } from "../shared/ui.jsx";
 import { callAssistant } from "../lib/callAssistant.js";
 import { RAW_REPORTS, INCIDENT_FALLBACK, COMMS_FALLBACK, parseIncidentSummary, parseComms } from "../lib/incident.js";
 
@@ -46,10 +46,7 @@ export default function IncidentCommandTab() {
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>Incident summarizer</SectionLabel>
-          <AIBadge />
-        </div>
+        <SectionHeader label="Incident summarizer" badge={<AIBadge />} />
         <div className="space-y-2 mb-3">
           {RAW_REPORTS.map((r) => (
             <div key={r.source} className="flex items-start gap-2 text-xs text-[#8FA69B]">
@@ -80,10 +77,7 @@ export default function IncidentCommandTab() {
       </Card>
 
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>Automated comms</SectionLabel>
-          <AIBadge label="AI comms" />
-        </div>
+        <SectionHeader label="Automated comms" badge={<AIBadge label="AI comms" />} />
         <label htmlFor="incident-description" className="sr-only">Incident description</label>
         <textarea
           id="incident-description"

@@ -3,7 +3,7 @@ import { AlertTriangle, TrendingUp, TrendingDown, CheckCircle2 } from "lucide-re
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell,
 } from "recharts";
-import { Card, SectionLabel, AIBadge } from "../shared/ui.jsx";
+import { Card, SectionLabel, SectionHeader, AIBadge } from "../shared/ui.jsx";
 import { densityColor, ZONES } from "../shared/data.js";
 import { hapticDispatch } from "../lib/haptics.js";
 
@@ -49,10 +49,7 @@ export default function OpsPulseTab() {
       </Card>
 
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>AI-flagged signal</SectionLabel>
-          <AIBadge />
-        </div>
+        <SectionHeader label="AI-flagged signal" badge={<AIBadge />} />
         <div className="flex items-start gap-2.5 bg-[#FF6B5B]/10 border border-[#FF6B5B]/25 rounded-xl p-3.5">
           <AlertTriangle size={16} className="text-[#FF6B5B] mt-0.5 shrink-0" aria-hidden="true" />
           <div className="text-sm text-[#F3F3EF] flex-1">

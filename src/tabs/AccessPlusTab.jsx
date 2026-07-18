@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Volume2, Clock, Captions, AlertTriangle } from "lucide-react";
-import { Card, SectionLabel, Pill, AIBadge } from "../shared/ui.jsx";
+import { Card, SectionLabel, SectionHeader, Pill, AIBadge } from "../shared/ui.jsx";
 import { callAssistant } from "../lib/callAssistant.js";
 import { SENSORY_FALLBACK } from "../lib/sensory.js";
 
@@ -92,16 +92,18 @@ export default function AccessPlusTab() {
       </Card>
 
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <SectionLabel>Live captions</SectionLabel>
-          <button
-            onClick={() => setCaptionsOn((v) => !v)}
-            aria-pressed={captionsOn}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${captionsOn ? "bg-[#3ED07A] text-[#0B140F] border-[#3ED07A]" : "bg-transparent text-[#8FA69B] border-[#223328]"}`}
-          >
-            {captionsOn ? "On" : "Off"}
-          </button>
-        </div>
+        <SectionHeader
+          label="Live captions"
+          badge={
+            <button
+              onClick={() => setCaptionsOn((v) => !v)}
+              aria-pressed={captionsOn}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition focus-visible:ring-2 focus-visible:ring-[#3ED07A] focus-visible:outline-none ${captionsOn ? "bg-[#3ED07A] text-[#0B140F] border-[#3ED07A]" : "bg-transparent text-[#8FA69B] border-[#223328]"}`}
+            >
+              {captionsOn ? "On" : "Off"}
+            </button>
+          }
+        />
         {captionsOn ? (
           <div className="bg-[#0B140F] rounded-xl p-4 flex items-start gap-2.5" role="status" aria-live="polite">
             <Captions size={16} className="text-[#3ED07A] mt-0.5 shrink-0" aria-hidden="true" />

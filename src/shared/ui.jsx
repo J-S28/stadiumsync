@@ -45,3 +45,17 @@ export function SectionLabel({ children }) {
     </h2>
   );
 }
+
+// The label-plus-trailing-control row every tab card opens with — an
+// AIBadge, a Pill, or an interactive toggle button all sit in the same
+// slot depending on the card (see `badge`). Pulled out once so the nine
+// tabs that use this row share one layout definition instead of each
+// repeating the flex wrapper.
+export function SectionHeader({ label, badge }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <SectionLabel>{label}</SectionLabel>
+      {badge}
+    </div>
+  );
+}
