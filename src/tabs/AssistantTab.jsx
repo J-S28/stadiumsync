@@ -4,6 +4,7 @@ import { Card, Pill } from "../shared/ui.jsx";
 import { AVATARS } from "../shared/data.js";
 import { BotAvatar } from "../shared/avatars.jsx";
 import { ASSISTANT_SCRIPT, detectLang, pickReply } from "../lib/assistant.js";
+import { callAssistant } from "../lib/callAssistant.js";
 
 // Hoisted so this list isn't reallocated on every render.
 const LANGS = [["en", "EN", "English"], ["es", "ES", "Spanish"], ["pt", "PT", "Portuguese"], ["fr", "FR", "French"], ["de", "DE", "German"]];
@@ -41,14 +42,8 @@ export default function AssistantTab({ profile }) {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/assistant", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history.map((m) => ({ role: m.from, text: m.text })) }),
-      });
-      if (!res.ok) throw new Error("assistant request failed");
-      const data = await res.json();
-      setMessages((m) => [...m, { from: "bot", text: data.reply || pickReply(activeLang, userMsg.text) }]);
+      const reply = await callAssistant({ messages: history.map((m) => ({ role: m.from, text: m.text })) });
+      setMessages((m) => [...m, { from: "bot", text: reply || pickReply(activeLang, userMsg.text) }]);
     } catch {
       // Offline / API-key-not-configured fallback so the demo still works
       setMessages((m) => [...m, { from: "bot", text: pickReply(activeLang, userMsg.text) }]);
