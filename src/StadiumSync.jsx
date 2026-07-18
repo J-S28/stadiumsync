@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo, lazy, Suspense } from "react";
+import React, { useState, memo, lazy, Suspense } from "react";
 import {
   MapPin, Utensils, MessageCircle, Bus, Activity, Users, AlertTriangle,
   Package, Leaf,
@@ -12,6 +12,7 @@ import { densityColor, ZONES, AVATARS } from "./shared/data.js";
 import { StaffAvatar } from "./shared/avatars.jsx";
 import { STAFF_PIN, TICKET_FORMAT } from "./lib/assistant.js";
 import { hapticSnap } from "./lib/haptics.js";
+import { useSpeechSynthesis } from "./lib/speech.js";
 
 // Every tab beyond the default Navigate view is code-split and
 // lazy-loaded — attendees only pay for Order/Assistant/Transport/etc.
@@ -234,30 +235,16 @@ const ZoneRow = memo(function ZoneRow({ name, density }) {
 function NavigateTab({ profile }) {
   const AvatarComp = AVATARS[profile.avatar].Comp;
   const [stepFree, setStepFree] = useState(true);
-  const [speaking, setSpeaking] = useState(false);
+  const { speaking, speak, stop } = useSpeechSynthesis();
 
   const toggleAudio = () => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
     if (speaking) {
-      window.speechSynthesis.cancel();
-      setSpeaking(false);
+      stop();
       return;
     }
     const route = `Walking route to Section 118, Seat 14. ${stepFree ? "Step-free route active. " : ""}4 minute walk via Concourse N. Gate 4 is near capacity — exit via Concourse South after the match.`;
-    const utterance = new SpeechSynthesisUtterance(route);
-    utterance.rate = 1;
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-    setSpeaking(true);
+    speak(route, { rate: 1 });
   };
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== "undefined" && window.speechSynthesis) window.speechSynthesis.cancel();
-    };
-  }, []);
 
   return (
     <div className="space-y-4">

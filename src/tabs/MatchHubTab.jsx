@@ -3,6 +3,7 @@ import { Clapperboard, Volume2, ScanEye } from "lucide-react";
 import { Card, SectionLabel, Pill, AIBadge } from "../shared/ui.jsx";
 import { callAssistant } from "../lib/callAssistant.js";
 import { COMMENTARY_FALLBACK } from "../lib/commentary.js";
+import { useSpeechSynthesis } from "../lib/speech.js";
 
 const MOMENTS = ["Corner kick won", "Near miss on goal", "Great tackle to break up an attack", "Goal!"];
 // Hoisted so this tuple isn't reallocated on every render.
@@ -14,17 +15,7 @@ export default function MatchHubTab() {
   const [moment, setMoment] = useState(null);
   const [commentary, setCommentary] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-
-  const speak = (text) => {
-    if (!text || typeof window === "undefined" || !window.speechSynthesis) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-    setSpeaking(true);
-  };
+  const { speaking, speak, stop } = useSpeechSynthesis();
 
   // Tapping a moment IS the toggle — commentary generates and plays
   // immediately, the way a live commentary feed would react to play as it
@@ -48,8 +39,7 @@ export default function MatchHubTab() {
 
   const toggleSpeak = () => {
     if (speaking) {
-      window.speechSynthesis?.cancel();
-      setSpeaking(false);
+      stop();
       return;
     }
     speak(commentary);
