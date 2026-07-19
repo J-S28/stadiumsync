@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { AlertTriangle, TrendingUp, TrendingDown, CheckCircle2 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell,
 } from "recharts";
 import { Card, SectionLabel, SectionHeader, AIBadge } from "../shared/ui.jsx";
 import { densityColor, ZONES } from "../shared/data.js";
-import { hapticDispatch } from "../lib/haptics.js";
+import { useDispatchAction } from "../lib/dispatch.js";
 
 // Hoisted so this list isn't reallocated on every render.
 const KPI_CARDS = [
@@ -15,11 +14,7 @@ const KPI_CARDS = [
 ];
 
 export default function OpsPulseTab() {
-  const [dispatched, setDispatched] = useState(false);
-  const dispatch = () => {
-    hapticDispatch();
-    setDispatched(true);
-  };
+  const { dispatched, dispatch } = useDispatchAction();
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">

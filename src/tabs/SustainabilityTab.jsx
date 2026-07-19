@@ -1,16 +1,11 @@
-import { useState } from "react";
 import { Leaf, CheckCircle2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Card, SectionLabel, SectionHeader, AIBadge } from "../shared/ui.jsx";
 import { SUSTAIN_PIE, PIE_COLORS } from "../shared/data.js";
-import { hapticDispatch } from "../lib/haptics.js";
+import { useDispatchAction } from "../lib/dispatch.js";
 
 export default function SustainabilityTab() {
-  const [dispatched, setDispatched] = useState(false);
-  const dispatch = () => {
-    hapticDispatch();
-    setDispatched(true);
-  };
+  const { dispatched, dispatch } = useDispatchAction();
   return (
     <div className="space-y-4">
       <Card className="p-5">

@@ -1,10 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
 import { pickProtocolReply } from '../lib/protocol.js';
 import { parseIncidentSummary, parseComms, RAW_REPORTS, INCIDENT_FALLBACK, COMMS_FALLBACK } from '../lib/incident.js';
 import { COMMENTARY_FALLBACK } from '../lib/commentary.js';
 import { parseEgressUpdate, EGRESS_FALLBACK } from '../lib/egress.js';
 import { callAssistant } from '../lib/callAssistant.js';
 import { hapticTick, hapticDispatch, hapticSnap } from '../lib/haptics.js';
+import { useDispatchAction } from '../lib/dispatch.js';
 
 describe('pickProtocolReply', () => {
   it('matches the lost-child protocol', () => {
@@ -180,6 +182,24 @@ describe('haptics', () => {
     delete navigator.vibrate;
     try {
       expect(() => hapticTick()).not.toThrow();
+    } finally {
+      navigator.vibrate = original;
+    }
+  });
+});
+
+describe('useDispatchAction', () => {
+  it('starts undispatched, then flips to dispatched and ticks the vibration on dispatch()', () => {
+    const vibrate = vi.fn();
+    const original = navigator.vibrate;
+    navigator.vibrate = vibrate;
+    try {
+      const { result } = renderHook(() => useDispatchAction());
+      expect(result.current.dispatched).toBe(false);
+
+      act(() => { result.current.dispatch(); });
+      expect(result.current.dispatched).toBe(true);
+      expect(vibrate).toHaveBeenCalledWith([200, 80, 200, 80, 400]);
     } finally {
       navigator.vibrate = original;
     }
