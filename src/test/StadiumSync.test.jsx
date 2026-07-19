@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StadiumSync from '../StadiumSync.jsx';
 
@@ -241,6 +241,48 @@ describe('Assistant tab', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('does nothing when Send is pressed with empty input', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn();
+    try {
+      const user = userEvent.setup();
+      await enterAsAttendee(user);
+      await user.click(await screen.findByRole('tab', { name: /assistant/i }));
+      await user.click(await screen.findByRole('button', { name: /send message/i }));
+      expect(global.fetch).not.toHaveBeenCalled();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('sends a message by pressing Enter, not just clicking Send', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /assistant/i }));
+
+    const input = await screen.findByLabelText(/message the assistant/i);
+    await user.type(input, 'where is the nearest exit{Enter}');
+    expect(await screen.findByText(/Gate 4/)).toBeInTheDocument();
+  });
+
+  it('falls back to the scripted reply when the API resolves without a usable reply', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: '' }) });
+    try {
+      const user = userEvent.setup();
+      await enterAsAttendee(user);
+      await user.click(await screen.findByRole('tab', { name: /assistant/i }));
+      const input = await screen.findByLabelText(/message the assistant/i);
+      // No language-marker words in any bank, so this also exercises the
+      // "no language detected, stay on the current pill" path.
+      await user.type(input, 'can you help me please');
+      await user.click(screen.getByRole('button', { name: /send message/i }));
+      expect(await screen.findByText(/routing that to the right place/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('Vendors tab (Ops Console)', () => {
@@ -283,6 +325,15 @@ describe('Order tab cart controls', () => {
 
     await user.click(await screen.findByRole('button', { name: /add ai pick, churro \+ dip, to order/i }));
     expect(await screen.findByRole('button', { name: /remove one churro \+ dip/i })).toBeInTheDocument();
+  });
+
+  it('adds an item from its own row button, not just the AI-pick banner', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /order/i }));
+
+    await user.click(await screen.findByRole('button', { name: /^add loaded nachos to order$/i }));
+    expect(await screen.findByRole('button', { name: /remove one loaded nachos/i })).toBeInTheDocument();
   });
 });
 
@@ -366,6 +417,53 @@ describe('Volunteer Copilot tab (Ops Console)', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('does nothing when Send is pressed with empty input', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn();
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /copilot/i }));
+      await user.click(await screen.findByRole('button', { name: /^send$/i }));
+      expect(global.fetch).not.toHaveBeenCalled();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('falls back to the offline protocol reply when the API resolves without a usable reply', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: '' }) });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /copilot/i }));
+      const input = await screen.findByLabelText(/ask the protocol assistant/i);
+      await user.type(input, 'a child is lost near Gate 3');
+      await user.click(screen.getByRole('button', { name: /^send$/i }));
+      expect(await screen.findByText(/Guest Services/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('falls back to the offline dispatch brief when the API resolves without a usable reply', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: '' }) });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /copilot/i }));
+      await user.click(await screen.findByRole('button', { name: /ping nearby volunteers/i }));
+      expect(await screen.findByText(/brief sent: "Redirect to Gate 4/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('Incident Command tab (Ops Console)', () => {
@@ -441,6 +539,36 @@ describe('Incident Command tab (Ops Console)', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('shows the fallback summary when the API resolves without a usable reply', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: '' }) });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /incident command/i }));
+      await user.click(await screen.findByRole('button', { name: /summarize with ai/i }));
+      expect(await screen.findByText(/consistent across security, volunteer/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('shows the fallback announcement when the API resolves without a usable reply', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: '' }) });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /incident command/i }));
+      await user.click(await screen.findByRole('button', { name: /generate announcement/i }));
+      expect(await screen.findByText(/for a faster exit, please use concourse s/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('Egress tab (Ops Console)', () => {
@@ -506,6 +634,82 @@ describe('Egress tab (Ops Console)', () => {
     expect(await screen.findByText(/egress optimizer:/i)).toBeInTheDocument();
     expect(screen.getByText(/metro — blue line/i).closest('button')).toHaveTextContent(/delayed 12 min/i);
   });
+
+  it('ignores a stale AI response after the delay is cleared before the request resolves', async () => {
+    const originalFetch = global.fetch;
+    let resolveFetch;
+    global.fetch = vi.fn(() => new Promise((resolve) => { resolveFetch = resolve; }));
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /egress/i }));
+
+      await user.click(await screen.findByRole('button', { name: /simulate transit delay/i }));
+      expect(await screen.findByText(/generating AI wayfinding update/i)).toBeInTheDocument();
+
+      // Clear the delay while the request is still in flight — the effect's
+      // cleanup should mark it cancelled so the late reply never lands.
+      await user.click(screen.getByRole('button', { name: /clear simulated delay/i }));
+
+      await act(async () => {
+        resolveFetch({ ok: true, json: () => Promise.resolve({ reply: 'WAYFINDING: stale update.\nSIGNAGE: STALE' }) });
+        await Promise.resolve();
+      });
+
+      expect(screen.queryByText(/stale update/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/egress pacing normal/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+});
+
+describe('Tournament Intel tab (Ops Console)', () => {
+  it('generates an organizer briefing automatically, with the offline fallback, from live zone/vendor/sustainability data', async () => {
+    const user = userEvent.setup();
+    await enterAsOperations(user);
+    await screen.findByText('Ops Console');
+    await user.click(screen.getByRole('tab', { name: /tournament intel/i }));
+
+    // The three stat tiles are derived from the same shared data other
+    // tabs read (ZONES, VENDOR_LOAD, SUSTAIN_PIE) — Gate 4/Ice Cream Co. are
+    // the busiest zone/lowest-stock vendor across the whole app.
+    expect(await screen.findByText('Gate 4')).toBeInTheDocument();
+    expect(screen.getByText('Ice Cream Co.')).toBeInTheDocument();
+    expect(await screen.findByText(/pre-position an extra marshal at gate 4/i)).toBeInTheDocument();
+  });
+
+  it('uses the real AI-generated briefing when the network call succeeds', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ reply: 'Crowd flow is holding steady across every gate. Vendor stock is the one thing to watch. Recommend a routine restock sweep before the second half.' }),
+    });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /tournament intel/i }));
+      expect(await screen.findByText(/recommend a routine restock sweep/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('falls back to the offline briefing when the API resolves without a usable reply', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: '' }) });
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /tournament intel/i }));
+      expect(await screen.findByText(/pre-position an extra marshal at gate 4/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('Match Hub tab', () => {
@@ -559,6 +763,20 @@ describe('Match Hub tab', () => {
       global.fetch = originalFetch;
     }
   });
+
+  it('falls back to the scripted commentary when the API resolves without a usable reply', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: '' }) });
+    try {
+      const user = userEvent.setup();
+      await enterAsAttendee(user);
+      await user.click(await screen.findByRole('tab', { name: /match hub/i }));
+      await user.click(await screen.findByRole('button', { name: /corner kick won/i }));
+      expect(await screen.findByText(/tactical shift/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
 
 describe('Access+ tab', () => {
@@ -598,6 +816,54 @@ describe('Access+ tab', () => {
       expect(await screen.findByText(/fireworks start in 12 minutes/i)).toBeInTheDocument();
     } finally {
       global.fetch = originalFetch;
+    }
+  });
+
+  it('ignores a stale AI warning after loud-moment warnings are turned off before the request resolves', async () => {
+    const originalFetch = global.fetch;
+    let resolveFetch;
+    global.fetch = vi.fn(() => new Promise((resolve) => { resolveFetch = resolve; }));
+    try {
+      const user = userEvent.setup();
+      await enterAsAttendee(user);
+      await user.click(await screen.findByRole('tab', { name: /access\+/i }));
+      expect(await screen.findByText(/checking upcoming moments/i)).toBeInTheDocument();
+
+      // Turn warnings off while the request is still in flight — the
+      // effect's cleanup should mark it cancelled so the late reply is dropped.
+      await user.click(screen.getByRole('button', { name: /loud-moment warnings/i }));
+
+      await act(async () => {
+        resolveFetch({ ok: true, json: () => Promise.resolve({ reply: 'stale warning text' }) });
+        await Promise.resolve();
+      });
+
+      expect(screen.queryByText(/stale warning text/i)).not.toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('rotates through the caption feed on a timer while captions are on', async () => {
+    // Everything that needs real-timer-backed polling (findBy*, navigating
+    // tabs) happens before fake timers go on — only the interval itself
+    // needs faking, and only fireEvent/sync queries touch the DOM while it's
+    // active, since findBy*'s polling would otherwise hang against a clock
+    // that never advances on its own.
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('tab', { name: /access\+/i }));
+    const captionsToggle = await screen.findByRole('button', { name: /^off$/i });
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(captionsToggle);
+      expect(screen.getByText(/kickoff in 5 minutes/i)).toBeInTheDocument();
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(6000); });
+      expect(screen.getByText(/step-free routes are available/i)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
     }
   });
 });

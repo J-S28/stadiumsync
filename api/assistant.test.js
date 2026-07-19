@@ -158,6 +158,14 @@ describe('POST /api/assistant', () => {
     expect(res.body.error).toBe('assistant_unavailable');
   });
 
+  it('returns 502 for an upstream error with no message, instead of throwing on the auth-error check', async () => {
+    createMock.mockRejectedValue(new Error());
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'hi' }] }, ip: '1.1.1.13' }), res);
+    expect(res.statusCode).toBe(502);
+    expect(res.body.error).toBe('assistant_unavailable');
+  });
+
   it('defaults to the attendee system prompt when no mode is given', async () => {
     createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
     const res = mockRes();
@@ -221,6 +229,13 @@ describe('POST /api/assistant', () => {
     expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('technical FIFA World Cup 2026 match analyst') }));
   });
 
+  it('uses the tournament intelligence briefing system prompt for mode "briefing"', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    const res = mockRes();
+    await handler(mockReq({ body: { messages: [{ role: 'user', text: 'zone/vendor/sustainability snapshot' }], mode: 'briefing' }, ip: '1.1.2.11' }), res);
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({ system: expect.stringContaining('Tournament Operations Intelligence briefing generator') }));
+  });
+
   it('rejects an unknown mode with 400', async () => {
     const res = mockRes();
     await handler(mockReq({ body: { messages: [{ role: 'user', text: 'hi' }], mode: 'nonsense' }, ip: '1.1.2.7' }), res);
@@ -238,6 +253,37 @@ describe('POST /api/assistant', () => {
     }
     expect(lastRes.statusCode).toBe(429);
     expect(lastRes.body.error).toBe('rate_limited');
+  });
+
+  it('sweeps fully-expired entries and trims partially-expired ones once the map exceeds its cap', async () => {
+    createMock.mockResolvedValue({ content: [{ type: 'text', text: 'ok' }] });
+    vi.useFakeTimers();
+    try {
+      const req = (ip) => mockReq({ body: { messages: [{ role: 'user', text: 'hi' }] }, ip });
+
+      // One request now, then goes silent — fully expired by sweep time.
+      await handler(req('stale-client'), mockRes());
+
+      vi.advanceTimersByTime(30_000);
+      // A second request inside the window keeps this entry's first
+      // timestamp alongside the new one — a mix of ages in one entry.
+      await handler(req('mixed-client'), mockRes());
+
+      vi.advanceTimersByTime(40_000);
+      // stale-client is now 70s stale (fully expired); mixed-client has
+      // one expired timestamp (70s old) and one still-fresh one (40s old).
+
+      for (let i = 0; i < 500; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await handler(req(`sweep-fill-${i}`), mockRes());
+      }
+
+      const finalRes = mockRes();
+      await handler(req('post-sweep-client'), finalRes);
+      expect(finalRes.statusCode).toBe(200);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('sweeps stale entries once the rate-limit map exceeds its cap, without breaking any client', async () => {

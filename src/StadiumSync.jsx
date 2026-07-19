@@ -4,7 +4,7 @@ import {
   Package, Leaf,
   Volume2, Accessibility, ShieldCheck,
   Radio, Sparkles, ArrowRight, Lock, LogOut,
-  Headset, Siren, DoorOpen, Clapperboard, Ear, MapPinned,
+  Headset, Siren, DoorOpen, Clapperboard, Ear, MapPinned, Gauge,
 } from "lucide-react";
 import { Card, SectionLabel, Pill } from "./shared/ui.jsx";
 import { TabErrorBoundary } from "./shared/ErrorBoundary.jsx";
@@ -32,6 +32,7 @@ const EgressTab = lazy(() => import("./tabs/EgressTab.jsx"));
 const MatchHubTab = lazy(() => import("./tabs/MatchHubTab.jsx"));
 const AccessPlusTab = lazy(() => import("./tabs/AccessPlusTab.jsx"));
 const FanZoneTab = lazy(() => import("./tabs/FanZoneTab.jsx"));
+const TournamentIntelTab = lazy(() => import("./tabs/TournamentIntelTab.jsx"));
 
 /* ---------------------------------- THEME ----------------------------------
 Palette:
@@ -363,6 +364,7 @@ const STAFF_TABS = [
   { id: "copilot", label: "Copilot", icon: Headset, render: CopilotTab },
   { id: "incident", label: "Incident Command", icon: Siren, render: IncidentCommandTab },
   { id: "egress", label: "Egress", icon: DoorOpen, render: EgressTab },
+  { id: "intel", label: "Tournament Intel", icon: Gauge, render: TournamentIntelTab },
 ];
 
 export default function StadiumSync() {

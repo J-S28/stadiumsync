@@ -102,6 +102,18 @@ Given the upcoming loud moment described in the latest message, write ONE short,
 Reply with just the warning itself, no extra commentary, no quotation marks.
 </output_format>`;
 
+const BRIEFING_CONTEXT = `<role>
+You are the StadiumSync Tournament Operations Intelligence briefing generator, written for tournament organizers overseeing Estadio Azteca during the FIFA World Cup 2026 — a distinct audience from the venue staff and volunteers the other modes serve.
+</role>
+
+<task>
+Given the live operations snapshot in the latest message (zone density, vendor stock, sustainability diversion rate), write a concise executive briefing: what's going well, what needs attention, and one concrete recommended action.
+</task>
+
+<output_format>
+3-4 sentences, direct and decision-oriented, ready for an organizer to read at a glance.
+</output_format>`;
+
 const LANG_NAMES = { en: "English", es: "Spanish", pt: "Portuguese", fr: "French", de: "German" };
 
 function commsPrompt(lang) {
@@ -148,7 +160,7 @@ Given the play-by-play moment in the latest message, explain the tactical signif
 </output_format>`;
 }
 
-const MODES = ["attendee", "protocol", "incident", "comms", "commentary", "brief", "egress", "sensory"];
+const MODES = ["attendee", "protocol", "incident", "comms", "commentary", "brief", "egress", "sensory", "briefing"];
 
 function systemPromptFor(mode, { lang, style }) {
   switch (mode) {
@@ -159,6 +171,7 @@ function systemPromptFor(mode, { lang, style }) {
     case "egress": return EGRESS_CONTEXT;
     case "sensory": return SENSORY_CONTEXT;
     case "commentary": return commentaryPrompt(style);
+    case "briefing": return BRIEFING_CONTEXT;
     default: return STADIUM_CONTEXT;
   }
 }

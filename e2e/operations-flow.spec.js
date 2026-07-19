@@ -101,4 +101,12 @@ test.describe('Operations dashboard', () => {
     await expect(page.getByText(/egress optimizer:/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /metro — blue line/i })).toContainText(/delayed 12 min/i);
   });
+
+  test('shows the tournament operations briefing for organizers', async ({ page }) => {
+    await enterAsOperations(page);
+    await page.getByRole('tab', { name: /tournament intel/i }).click();
+    await expect(page.getByText('Gate 4', { exact: true })).toBeVisible();
+    await expect(page.getByText('Ice Cream Co.', { exact: true })).toBeVisible();
+    await expect(page.getByText(/pre-position an extra marshal at gate 4/i)).toBeVisible();
+  });
 });
