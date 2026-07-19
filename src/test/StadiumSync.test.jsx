@@ -51,6 +51,14 @@ describe('Onboarding — Attendee entry', () => {
     expect(screen.queryByText(/operations access/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/operations passcode/i)).not.toBeInTheDocument();
   });
+
+  it('enters the stadium by pressing Enter in the Ticket ID field, not just clicking the button', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.type(screen.getByLabelText(/your name/i), 'Leo');
+    await user.type(screen.getByLabelText(/ticket id/i), 'WC26-118014{Enter}');
+    expect(await screen.findByText('Hey, Leo')).toBeInTheDocument();
+  });
 });
 
 describe('Onboarding — Operations entry', () => {
@@ -68,6 +76,14 @@ describe('Onboarding — Operations entry', () => {
     await enterAsOperations(user);
     expect(await screen.findByText('Ops Console')).toBeInTheDocument();
     expect(screen.getByText('Ops Pulse')).toBeInTheDocument();
+  });
+
+  it('unlocks the Ops Console by pressing Enter in the passcode field, not just clicking the button', async () => {
+    const user = userEvent.setup();
+    renderApp();
+    await user.click(screen.getByRole('tab', { name: /operations/i }));
+    await user.type(screen.getByLabelText(/operations passcode/i), '2026{Enter}');
+    expect(await screen.findByText('Ops Console')).toBeInTheDocument();
   });
 });
 
@@ -167,6 +183,17 @@ describe('Accessibility toggles', () => {
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     expect(within(toggle).getByText(/off — standard route/i)).toBeInTheDocument();
+  });
+
+  it('omits the step-free mention from the spoken route once step-free routing is turned off', async () => {
+    const user = userEvent.setup();
+    await enterAsAttendee(user);
+    await user.click(await screen.findByRole('button', { name: /step-free route/i }));
+
+    await user.click(await screen.findByRole('button', { name: /audio wayfinding/i }));
+    const utterance = window.speechSynthesis.speak.mock.calls[0][0];
+    expect(utterance.text).not.toMatch(/step-free route active/i);
+    expect(utterance.text).toMatch(/gate 4 is near capacity/i);
   });
 
   it('speaks directions via the browser speech synthesis API, and stops on a second tap', async () => {
@@ -706,6 +733,33 @@ describe('Tournament Intel tab (Ops Console)', () => {
       await screen.findByText('Ops Console');
       await user.click(screen.getByRole('tab', { name: /tournament intel/i }));
       expect(await screen.findByText(/pre-position an extra marshal at gate 4/i)).toBeInTheDocument();
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('ignores a stale briefing reply after navigating away before the request resolves', async () => {
+    const originalFetch = global.fetch;
+    let resolveFetch;
+    global.fetch = vi.fn(() => new Promise((resolve) => { resolveFetch = resolve; }));
+    try {
+      const user = userEvent.setup();
+      await enterAsOperations(user);
+      await screen.findByText('Ops Console');
+      await user.click(screen.getByRole('tab', { name: /tournament intel/i }));
+      expect(await screen.findByText(/generating tournament briefing/i)).toBeInTheDocument();
+
+      // Navigate away — unmounting while the request is still in flight —
+      // the effect's cleanup should mark it cancelled so the late reply
+      // never lands on a tab that isn't even showing anymore.
+      await user.click(screen.getByRole('tab', { name: /^ops pulse$/i }));
+
+      await act(async () => {
+        resolveFetch({ ok: true, json: () => Promise.resolve({ reply: 'stale briefing text' }) });
+        await Promise.resolve();
+      });
+
+      expect(screen.queryByText(/stale briefing text/i)).not.toBeInTheDocument();
     } finally {
       global.fetch = originalFetch;
     }

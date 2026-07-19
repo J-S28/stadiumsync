@@ -7,6 +7,13 @@ import { Card, SectionLabel, SectionHeader, AIBadge } from "../shared/ui.jsx";
 import { densityColor, ZONES } from "../shared/data.js";
 import { hapticDispatch } from "../lib/haptics.js";
 
+// Hoisted so this list isn't reallocated on every render.
+const KPI_CARDS = [
+  { label: "Attendees in venue", value: "68,204", delta: "+3.2%", up: true },
+  { label: "Open incidents", value: "3", delta: "-2", up: false },
+  { label: "Avg. wait (food)", value: "11m", delta: "+4m", up: true },
+];
+
 export default function OpsPulseTab() {
   const [dispatched, setDispatched] = useState(false);
   const dispatch = () => {
@@ -16,11 +23,7 @@ export default function OpsPulseTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "Attendees in venue", value: "68,204", delta: "+3.2%", up: true },
-          { label: "Open incidents", value: "3", delta: "-2", up: false },
-          { label: "Avg. wait (food)", value: "11m", delta: "+4m", up: true },
-        ].map((k) => (
+        {KPI_CARDS.map((k) => (
           <Card key={k.label} className="p-4">
             <div className="text-[11px] text-[#8FA69B] mb-1.5">{k.label}</div>
             <div className="text-xl font-semibold text-[#F3F3EF]">{k.value}</div>
